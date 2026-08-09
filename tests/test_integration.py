@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from watthog.cli import main
 from watthog.config import Settings
 from watthog.meter import PowerMeter
@@ -12,6 +14,7 @@ from watthog.ui.report import result_to_dict, save_report
 SHORT_DURATION_SECONDS = 1.0
 SHORT_INTERVAL_SECONDS = 0.25
 EXPECTED_SAMPLES = int(SHORT_DURATION_SECONDS / SHORT_INTERVAL_SECONDS)
+CONVERSION_LOSS_LABEL = "Потери БП"
 
 
 def run_short_session():
@@ -48,8 +51,12 @@ def test_session_produces_plausible_power_readings():
 def test_breakdown_sums_to_the_reported_total():
     result = run_short_session()
     breakdown = result.average_breakdown
-    components = sum(watts for label, watts in breakdown.components() if label != "Потери БП")
-    assert components == breakdown.total_dc
+    components = sum(watts for label, watts in breakdown.components() if label != CONVERSION_LOSS_LABEL)
+    # Точное равенство здесь неуместно: начиная с Python 3.12 встроенный sum
+    # складывает вещественные числа с компенсацией погрешности, а total_dc
+    # суммирует поля напрямую, и результаты расходятся в последнем разряде.
+    assert components == pytest.approx(breakdown.total_dc)
+    assert breakdown.total_ac == pytest.approx(breakdown.total_dc + breakdown.conversion_loss)
 
 
 def test_report_is_json_serializable(tmp_path):
