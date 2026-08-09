@@ -24,9 +24,9 @@ jobs:
             asset: watthog-linux-x86_64
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -61,7 +61,7 @@ jobs:
           mkdir -p release
           cp "${{ matrix.built }}" "release/${{ matrix.asset }}"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.asset }}
           path: release/${{ matrix.asset }}
@@ -71,11 +71,14 @@ jobs:
     name: публикация релиза
     runs-on: ubuntu-latest
     needs: build
+    # Ручной запуск на ветке нужен для проверки сборки, а публиковать релиз
+    # без тега некуда, поэтому этот шаг выполняется только по тегу.
+    if: startsWith(github.ref, 'refs/tags/')
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
@@ -86,7 +89,7 @@ jobs:
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: artifacts/*
           generate_release_notes: true
