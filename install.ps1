@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Установщик WattHog для Windows.
 
