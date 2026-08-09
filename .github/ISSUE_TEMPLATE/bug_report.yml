@@ -1,0 +1,69 @@
+name: Баг
+description: Программа падает, считает неправду или ведёт себя странно
+title: "[баг] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за отчёт. Чтобы разобраться быстрее, приложите вывод `watthog info` -
+        там видно, какое железо нашлось и какие источники данных доступны.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Что произошло
+      description: Опишите проблему и что вы ожидали увидеть.
+      placeholder: После запуска замера мощность видеокарты всегда показывает ноль.
+    validations:
+      required: true
+
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Вывод watthog info
+      description: Выполните `watthog info` и вставьте результат целиком.
+      render: text
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Операционная система
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux
+        - Другое
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Версия WattHog
+      description: Показывает `watthog --version`.
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Способ установки
+      options:
+        - Готовый exe из релиза
+        - install.ps1
+        - install.sh
+        - pip или pipx
+        - Из исходников
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Сообщение об ошибке
+      description: Если программа упала, вставьте текст ошибки целиком.
+      render: text

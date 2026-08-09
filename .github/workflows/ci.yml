@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: линтер
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install ruff
+      - run: ruff check .
+
+  test:
+    name: ${{ matrix.os }} · Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Установка зависимостей
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Тесты
+        run: python -m pytest
+
+      - name: Проверка определения железа
+        run: python -m watthog info
+
+      - name: Короткий замер
+        run: python -m watthog run --duration 3 --interval 0.5 --plain --no-save
+
+  build:
+    name: сборка ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Установка зависимостей
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Сборка исполняемого файла
+        run: python -m PyInstaller --noconfirm --clean packaging/watthog.spec
+
+      - name: Проверка сборки (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          ./dist/WattHog.exe --version
+          ./dist/WattHog.exe run --duration 3 --interval 0.5 --plain --no-save
+
+      - name: Проверка сборки (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          chmod +x dist/WattHog
+          ./dist/WattHog --version
+          ./dist/WattHog run --duration 3 --interval 0.5 --plain --no-save

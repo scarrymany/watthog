@@ -1,0 +1,11 @@
+# Переводы строк нормализуются в LF, иначе install.sh не запустится в Linux.
+* text=auto eol=lf
+
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+*.png binary
+*.ico binary
+
+# Снимки интерфейса не должны попадать в статистику языков репозитория.
+docs/*.svg linguist-documentation

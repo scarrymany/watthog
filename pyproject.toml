@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "watthog"
+version = "1.0.0"
+description = "Консольный измеритель энергопотребления ПК: сколько ватт система ест прямо сейчас и во что это выльется за сутки"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "yeet17" }]
+keywords = [
+    "power",
+    "watts",
+    "energy",
+    "monitoring",
+    "tui",
+    "nvml",
+    "rapl",
+    "electricity",
+    "hardware",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: System Administrators",
+    "Natural Language :: Russian",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Hardware",
+    "Topic :: System :: Monitoring",
+]
+dependencies = ["psutil>=5.9", "rich>=13.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pyinstaller>=6.0", "ruff>=0.6"]
+
+[project.scripts]
+watthog = "watthog.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/scarrymany/watthog"
+Repository = "https://github.com/scarrymany/watthog"
+Issues = "https://github.com/scarrymany/watthog/issues"
+Changelog = "https://github.com/scarrymany/watthog/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+packages = ["watthog", "watthog.ui"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "RET", "ARG"]

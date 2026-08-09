@@ -1,0 +1,56 @@
+name: Расхождение с ваттметром
+description: Показания WattHog заметно отличаются от розеточного ваттметра
+title: "[точность] "
+labels: ["accuracy"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Такие отчёты напрямую улучшают модель и справочник мощности железа.
+        Особенно ценны замеры с реальным ваттметром в розетке.
+
+  - type: input
+    id: measured
+    attributes:
+      label: Показания ваттметра
+      placeholder: 265 Вт
+    validations:
+      required: true
+
+  - type: input
+    id: reported
+    attributes:
+      label: Показания WattHog
+      placeholder: 308 Вт
+    validations:
+      required: true
+
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Вывод watthog info
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: report
+    attributes:
+      label: Отчёт замера
+      description: JSON из каталога отчётов или вывод команды `watthog run --json report.json`.
+      render: json
+
+  - type: textarea
+    id: load
+    attributes:
+      label: Что делала система во время замера
+      placeholder: Простой рабочего стола / игра / рендер / стресс-тест
+    validations:
+      required: true
+
+  - type: input
+    id: psu
+    attributes:
+      label: Блок питания
+      description: Модель, номинал и сертификат 80 PLUS, если известны.
+      placeholder: Corsair RM750x, 750 Вт, Gold

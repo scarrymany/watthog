@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: сборка ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            built: dist/WattHog.exe
+            asset: WattHog.exe
+          - os: ubuntu-latest
+            built: dist/WattHog
+            asset: watthog-linux-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Установка зависимостей
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Тесты
+        run: python -m pytest
+
+      - name: Сборка исполняемого файла
+        run: python -m PyInstaller --noconfirm --clean packaging/watthog.spec
+
+      - name: Проверка сборки (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          ./dist/WattHog.exe --version
+          ./dist/WattHog.exe run --duration 3 --interval 0.5 --plain --no-save
+
+      - name: Проверка сборки (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          chmod +x dist/WattHog
+          ./dist/WattHog --version
+          ./dist/WattHog run --duration 3 --interval 0.5 --plain --no-save
+
+      - name: Подготовка артефакта
+        shell: bash
+        run: |
+          mkdir -p release
+          cp "${{ matrix.built }}" "release/${{ matrix.asset }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: release/${{ matrix.asset }}
+          if-no-files-found: error
+
+  publish:
+    name: публикация релиза
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Контрольные суммы
+        run: |
+          cd artifacts
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
