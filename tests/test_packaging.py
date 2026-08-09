@@ -18,16 +18,23 @@ def read_bytes(relative: str) -> bytes:
     return (ROOT / relative).read_bytes()
 
 
-def test_windows_installer_starts_with_utf8_bom():
-    # Windows PowerShell 5.1 читает .ps1 без BOM в системной кодировке и
-    # спотыкается на кириллице ещё на этапе разбора скрипта.
-    assert read_bytes("install.ps1").startswith(UTF8_BOM)
+@pytest.mark.parametrize("script", ["install.ps1", "install.sh"])
+def test_installers_are_pure_ascii_without_bom(script):
+    """Установщики должны разбираться при любой трактовке кодировки.
 
-
-def test_linux_installer_has_no_bom_and_uses_lf():
-    payload = read_bytes("install.sh")
-    # BOM перед shebang не даст ядру найти интерпретатор.
+    Windows PowerShell 5.1 читает .ps1 без BOM в системной кодировке, и
+    не-ASCII текст ломает разбор скрипта ещё до установки. Добавить BOM нельзя:
+    он доезжает до строки в ``irm ... | iex`` и мешает ``param`` быть первой
+    инструкцией. Обе ловушки обходит только чистый ASCII без BOM.
+    """
+    payload = read_bytes(script)
     assert not payload.startswith(UTF8_BOM)
+    non_ascii = {byte for byte in payload if byte > 0x7F}
+    assert not non_ascii, f"{script} содержит не-ASCII байты: {sorted(non_ascii)}"
+
+
+def test_linux_installer_has_shebang_and_lf_endings():
+    payload = read_bytes("install.sh")
     assert payload.startswith(b"#!/usr/bin/env bash")
     assert b"\r\n" not in payload
 
@@ -38,8 +45,7 @@ def test_linux_installer_rejects_macos():
 
 @pytest.mark.parametrize("script", ["install.ps1", "install.sh"])
 def test_installers_point_at_the_real_repository(script):
-    text = (ROOT / script).read_text(encoding="utf-8-sig")
-    assert "scarrymany/watthog" in text
+    assert "scarrymany/watthog" in (ROOT / script).read_text(encoding="ascii")
 
 
 def test_version_is_consistent_across_project_files():
