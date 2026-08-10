@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 from dataclasses import replace
+from datetime import date
 from pathlib import Path
 
 from rich.console import Console
@@ -17,6 +18,7 @@ from watthog import constants as const
 from watthog.config import Settings, load_settings, save_settings
 from watthog.meter import PowerMeter
 from watthog.session import MeasurementSession, Sample, SessionResult
+from watthog.tariffs import find_preset, preset_keys
 from watthog.telemetry import TelemetryReader
 from watthog.ui import menu as menu_ui
 from watthog.ui.dashboard import LiveDashboard, console_is_tall_enough
@@ -29,6 +31,7 @@ COMMAND_INFO = "info"
 COMMAND_CONFIG = "config"
 COMMAND_MENU = "menu"
 COMMAND_GUI = "gui"
+COMMAND_TARIFFS = "tariffs"
 
 _GUI_MISSING_HINT = (
     "Оконный интерфейс недоступен: {error}.\n"
@@ -55,11 +58,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "command",
         nargs="?",
-        choices=[COMMAND_RUN, COMMAND_INFO, COMMAND_CONFIG, COMMAND_GUI, COMMAND_MENU],
+        choices=[COMMAND_RUN, COMMAND_INFO, COMMAND_CONFIG, COMMAND_GUI, COMMAND_TARIFFS, COMMAND_MENU],
         default=None,
         help="run - сразу запустить замер, info - показать железо и источники, "
-        "config - открыть настройки, gui - открыть оконный интерфейс. "
-        "Без команды запускается меню.",
+        "config - открыть настройки, gui - открыть оконный интерфейс, "
+        "tariffs - показать справочник тарифов. Без команды запускается меню.",
     )
     parser.add_argument(
         "-d",
@@ -77,6 +80,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--tariff", type=float, metavar="ЦЕНА", help="цена киловатт-часа для расчёта затрат")
     parser.add_argument("--currency", metavar="ЗНАК", help="обозначение валюты в отчёте")
+    parser.add_argument(
+        "--preset",
+        choices=preset_keys(),
+        metavar="КЛЮЧ",
+        help="тариф из справочника: " + ", ".join(preset_keys()),
+    )
     parser.add_argument("--json", dest="json_path", type=Path, metavar="ФАЙЛ", help="сохранить отчёт в JSON")
     parser.add_argument("--no-save", action="store_true", help="не сохранять отчёт в каталог отчётов")
     parser.add_argument("--plain", action="store_true", help="без живой панели: только текстовый вывод")
@@ -114,6 +123,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if command == COMMAND_GUI:
         return _command_gui(console)
+    if command == COMMAND_TARIFFS:
+        console.print(menu_ui.tariffs_panel(settings))
+        return 0
     return _command_menu(console, settings, args)
 
 
@@ -140,6 +152,15 @@ def _apply_overrides(settings: Settings, args: argparse.Namespace) -> Settings:
         settings = replace(settings, duration_seconds=int(args.duration))
     if args.interval is not None:
         settings = replace(settings, sample_interval=args.interval)
+    if args.preset:
+        preset = find_preset(args.preset)
+        if preset is not None:
+            settings = replace(
+                settings,
+                tariff_per_kwh=preset.price_on(date.today()),
+                currency=preset.currency,
+            )
+    # Явно указанные цена и валюта важнее выбранного справочного тарифа.
     if args.tariff is not None:
         settings = replace(settings, tariff_per_kwh=args.tariff)
     if args.currency:
@@ -191,6 +212,8 @@ def _command_menu(console: Console, settings: Settings, args: argparse.Namespace
             settings = menu_ui.edit_settings(console, settings)
         elif choice == menu_ui.MENU_GUI:
             _command_gui(console)
+        elif choice == menu_ui.MENU_TARIFFS:
+            settings = menu_ui.pick_tariff(console, settings)
         elif choice == menu_ui.MENU_HARDWARE:
             _command_info(console, settings)
         elif choice == menu_ui.MENU_ABOUT:

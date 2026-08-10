@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import date
 
 from rich.align import Align
 from rich.console import Console, Group, RenderableType
@@ -16,6 +17,7 @@ from watthog import constants as const
 from watthog.config import Settings, config_path, save_settings
 from watthog.donate import DONATION_ADDRESSES, DONATION_NOTE
 from watthog.formatting import parse_number
+from watthog.tariffs import TARIFF_PRESETS, match_preset
 
 _LOGO = (
     "██╗    ██╗ █████╗ ████████╗████████╗██╗  ██╗ ██████╗  ██████╗ ",
@@ -34,16 +36,18 @@ MENU_RUN = "1"
 MENU_RUN_CUSTOM = "2"
 MENU_GUI = "3"
 MENU_SETTINGS = "4"
-MENU_HARDWARE = "5"
-MENU_ABOUT = "6"
-MENU_DONATE = "7"
+MENU_TARIFFS = "5"
+MENU_HARDWARE = "6"
+MENU_ABOUT = "7"
+MENU_DONATE = "8"
 MENU_EXIT = "0"
 
 _MENU_ITEMS = (
     (MENU_RUN, "Запустить замер", "тест длительностью {duration} с"),
     (MENU_RUN_CUSTOM, "Замер другой длительности", "указать время вручную"),
     (MENU_GUI, "Оконный интерфейс", "то же самое, но в окне"),
-    (MENU_SETTINGS, "Настройки", "тариф, блок питания, калибровка"),
+    (MENU_SETTINGS, "Настройки", "блок питания, калибровка, отчёты"),
+    (MENU_TARIFFS, "Тариф на электроэнергию", "справочник цен и валюта"),
     (MENU_HARDWARE, "Железо и источники данных", "что найдено и что измеряется"),
     (MENU_ABOUT, "О программе", "как считается мощность"),
     (MENU_DONATE, "Поддержать проект", "реквизиты в криптовалюте"),
@@ -144,6 +148,86 @@ def about_panel() -> RenderableType:
     text.append("   ·   ", style="app.muted")
     text.append(REPO_URL, style="app.muted")
     return Panel(text, title="[app.label]О программе", border_style="app.border", padding=(1, 2))
+
+
+def tariffs_panel(settings: Settings | None = None) -> RenderableType:
+    """Справочник тарифов с отметкой того, что выбран сейчас."""
+    today = date.today()
+    current = None
+    if settings is not None:
+        current = match_preset(settings.tariff_per_kwh, settings.currency, today)
+
+    table = Table.grid(padding=(0, 2))
+    table.add_column(justify="right", width=3)
+    table.add_column(justify="left", width=30)
+    table.add_column(justify="right", width=12)
+    table.add_column(justify="left")
+
+    for index, preset in enumerate(TARIFF_PRESETS, start=1):
+        chosen = current is not None and current.key == preset.key
+        note = preset.description
+        upcoming = preset.upcoming_change(today)
+        if upcoming is not None:
+            note += (
+                f", с {upcoming.effective_from.strftime('%d.%m.%Y')} будет "
+                f"{upcoming.price:.2f} {preset.currency}"
+            )
+        table.add_row(
+            Text(f"[{index}]", style="app.accent"),
+            Text(("● " if chosen else "  ") + preset.region, style="app.accent" if chosen else "app.value"),
+            Text(f"{preset.price_on(today):.2f} {preset.currency}", style="app.value"),
+            Text(note, style="app.muted"),
+        )
+
+    sources = Table.grid(padding=(0, 2))
+    sources.add_column(justify="left", width=30)
+    sources.add_column(justify="left")
+    for preset in TARIFF_PRESETS:
+        sources.add_row(Text(preset.region, style="app.muted"), Text(preset.source, style="app.muted"))
+
+    body = Group(
+        table,
+        Text(""),
+        Text("Откуда цифры", style="app.label"),
+        sources,
+        Text(""),
+        Text(
+            "Тариф зависит от региона, счётчика и категории жилья. Любое значение "
+            "можно заменить своим в настройках.",
+            style="app.hint",
+        ),
+    )
+    return Panel(body, title="[app.label]Тариф на электроэнергию", border_style="app.border", padding=(1, 2))
+
+
+def pick_tariff(console: Console, settings: Settings) -> Settings:
+    """Показывает справочник и применяет выбранный тариф."""
+    console.print(tariffs_panel(settings))
+    choices = [str(index) for index in range(1, len(TARIFF_PRESETS) + 1)]
+    answer = Prompt.ask(
+        "[app.accent]Какой тариф применить[/app.accent] [app.muted](0 - оставить как есть)[/app.muted]",
+        choices=[*choices, "0"],
+        default="0",
+        console=console,
+        show_choices=False,
+    )
+    if answer == "0":
+        return settings
+
+    preset = TARIFF_PRESETS[int(answer) - 1]
+    updated = replace(
+        settings,
+        tariff_per_kwh=preset.price_on(date.today()),
+        currency=preset.currency,
+    ).normalized()
+    save_settings(updated)
+    console.print(
+        Text(
+            f"Тариф: {updated.tariff_per_kwh:.2f} {updated.currency} за кВт·ч ({preset.region})",
+            style="app.ok",
+        )
+    )
+    return updated
 
 
 def donate_panel() -> RenderableType:

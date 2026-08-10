@@ -67,6 +67,31 @@ def test_icon_exists_and_is_a_valid_ico():
     assert int.from_bytes(payload[4:6], "little") > 0
 
 
+def _project_text_files() -> list[Path]:
+    skipped_directories = {".git", "build", "dist", "__pycache__", ".venv", ".pytest_cache"}
+    files = []
+    for pattern in ("*.py", "*.toml", "*.txt", "*.spec", "*.cfg", "*.yml"):
+        for path in ROOT.rglob(pattern):
+            if skipped_directories.isdisjoint(path.parts):
+                files.append(path)
+    return files
+
+
+def test_no_source_file_starts_with_a_byte_order_mark():
+    """BOM тихо ломает разбор там, где его не ждут.
+
+    Парсер TOML спотыкается на первой же строке, а Windows PowerShell не может
+    выполнить скрипт со меткой в начале. Появляется BOM обычно случайно: команда
+    `Set-Content -Encoding UTF8` в PowerShell 5.1 всегда его дописывает.
+    """
+    marked = [
+        path.relative_to(ROOT).as_posix()
+        for path in _project_text_files()
+        if path.read_bytes().startswith(UTF8_BOM)
+    ]
+    assert not marked, f"файлы с BOM: {marked}"
+
+
 def test_pyinstaller_spec_builds_both_executables():
     spec = (ROOT / "packaging" / "watthog.spec").read_text(encoding="utf-8")
     assert 'name="WattHog"' in spec

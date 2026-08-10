@@ -2,6 +2,7 @@ import json
 
 from watthog import constants as const
 from watthog.config import MAX_COMPONENT_WATTS, Settings, load_settings, save_settings
+from watthog.tariffs import DEFAULT_CURRENCY
 
 
 def test_defaults_survive_normalization():
@@ -34,7 +35,7 @@ def test_zero_component_override_means_automatic():
 
 
 def test_empty_currency_falls_back_to_default():
-    assert Settings(currency="").normalized().currency == const.DEFAULT_CURRENCY
+    assert Settings(currency="").normalized().currency == DEFAULT_CURRENCY
 
 
 def test_save_and_load_round_trip(tmp_path):

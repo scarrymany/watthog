@@ -5,6 +5,7 @@ from __future__ import annotations
 import tkinter as tk
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from datetime import date
 
 import customtkinter as ctk
 
@@ -34,6 +35,7 @@ from watthog.gui.theme import (
     primary_button,
 )
 from watthog.inventory import GpuKind, HardwareProfile
+from watthog.tariffs import CUSTOM_PRESET_TITLE, TARIFF_PRESETS, TariffPreset, match_preset
 from watthog.telemetry import SourceStatus
 
 _AUTO_LABEL = "авто"
@@ -120,7 +122,7 @@ class SettingsDialog(_Dialog):
         settings: Settings,
         on_apply: Callable[[Settings], None],
     ) -> None:
-        super().__init__(parent, fonts, "настройки", 560, 640)
+        super().__init__(parent, fonts, "настройки", 620, 700)
         self._settings = settings
         self._on_apply = on_apply
         self._inputs: dict[str, ctk.CTkEntry] = {}
@@ -144,6 +146,8 @@ class SettingsDialog(_Dialog):
             self._fonts,
             SIZE_TINY,
         ).pack(fill="x", padx=16, pady=(0, 10))
+
+        self._add_preset_picker(container)
 
         form = ctk.CTkScrollableFrame(container, fg_color="transparent", scrollbar_button_color=BORDER)
         form.pack(fill="both", expand=True, padx=8)
@@ -172,6 +176,81 @@ class SettingsDialog(_Dialog):
         primary_button(buttons, "Сохранить", self._apply, self._fonts, width=150).pack(side="right")
         ghost_button(buttons, "Отмена", self.destroy, self._fonts, width=110).pack(side="right", padx=(0, 10))
         ghost_button(buttons, "Сбросить", self._reset, self._fonts, width=110).pack(side="left")
+
+    def _add_preset_picker(self, parent: tk.Misc) -> None:
+        """Выбор готового тарифа: заполняет цену и валюту одним движением."""
+        today = date.today()
+        self._presets_by_label = {_preset_label(preset, today): preset for preset in TARIFF_PRESETS}
+        labels = [*self._presets_by_label, CUSTOM_PRESET_TITLE]
+
+        current = match_preset(self._settings.tariff_per_kwh, self._settings.currency, today)
+        selected = CUSTOM_PRESET_TITLE
+        if current is not None:
+            selected = _preset_label(current, today)
+
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(fill="x", padx=16, pady=(0, 8))
+
+        labels_column = ctk.CTkFrame(row, fg_color="transparent")
+        labels_column.pack(side="left", fill="x", expand=True)
+        ctk.CTkLabel(
+            labels_column,
+            text="Тариф из справочника",
+            font=self._fonts.ctk(SIZE_BASE),
+            text_color=TEXT,
+            anchor="w",
+        ).pack(fill="x")
+        self._preset_hint = muted(labels_column, "", self._fonts, SIZE_TINY)
+        self._preset_hint.pack(fill="x")
+
+        self._preset_menu = ctk.CTkOptionMenu(
+            row,
+            values=labels,
+            command=self._apply_preset,
+            width=230,
+            height=34,
+            font=self._fonts.ctk(SIZE_SMALL),
+            fg_color=BACKGROUND,
+            button_color=BORDER,
+            button_hover_color=ACCENT,
+            text_color=TEXT,
+            dropdown_fg_color=SURFACE,
+            dropdown_text_color=TEXT,
+            dropdown_hover_color=BORDER,
+            dropdown_font=self._fonts.ctk(SIZE_SMALL),
+        )
+        self._preset_menu.set(selected)
+        self._preset_menu.pack(side="right")
+        self._update_preset_hint(current)
+
+    def _apply_preset(self, label: str) -> None:
+        preset = self._presets_by_label.get(label)
+        self._update_preset_hint(preset)
+        if preset is None:
+            return
+
+        today = date.today()
+        for name, value in (
+            ("tariff_per_kwh", f"{preset.price_on(today):g}"),
+            ("currency", preset.currency),
+        ):
+            widget = self._inputs[name]
+            widget.delete(0, "end")
+            widget.insert(0, value)
+
+    def _update_preset_hint(self, preset: TariffPreset | None) -> None:
+        if preset is None:
+            self._preset_hint.configure(text="цена и валюта задаются вручную")
+            return
+
+        hint = preset.source
+        upcoming = preset.upcoming_change(date.today())
+        if upcoming is not None:
+            hint += (
+                f"; с {upcoming.effective_from.strftime('%d.%m.%Y')} будет "
+                f"{upcoming.price:.2f} {preset.currency}"
+            )
+        self._preset_hint.configure(text=hint)
 
     def _add_field(self, parent: tk.Misc, field: _Field) -> None:
         row = ctk.CTkFrame(parent, fg_color="transparent")
@@ -213,6 +292,10 @@ class SettingsDialog(_Dialog):
 
 
 _INVALID = object()
+
+
+def _preset_label(preset: TariffPreset, today: date) -> str:
+    return f"{preset.region} - {preset.price_on(today):.2f} {preset.currency}"
 
 
 def _parse_field(field: _Field, raw: str) -> object:

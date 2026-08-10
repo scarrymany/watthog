@@ -5,6 +5,7 @@
 """
 
 import tkinter as tk
+from datetime import date
 
 import pytest
 
@@ -153,6 +154,32 @@ def test_empty_chart_draws_no_axis_labels(tk_root):
     texts = [chart.itemcget(item, "text") for item in chart.find_all() if chart.type(item) == "text"]
     # Подписи шкалы без данных были бы бессмысленными нулями и единицами.
     assert texts == ["График появится после запуска замера"]
+
+
+def test_settings_dialog_applies_a_tariff_preset(gui_window, monkeypatch):
+    from watthog.gui import dialogs
+    from watthog.tariffs import find_preset
+
+    # Настройки пользователя не должны меняться из-за прогона тестов.
+    monkeypatch.setattr(dialogs, "save_settings", lambda *_args, **_kwargs: None)
+
+    moscow = find_preset("ru-msk-gas")
+    assert moscow is not None
+    today = date.today()
+
+    applied: list = []
+    dialog = dialogs.SettingsDialog(gui_window, gui_window._fonts, gui_window._settings, applied.append)
+    gui_window.update()
+
+    dialog._apply_preset(dialogs._preset_label(moscow, today))
+    gui_window.update()
+    assert dialog._inputs["currency"].get() == moscow.currency
+    assert float(dialog._inputs["tariff_per_kwh"].get()) == moscow.price_on(today)
+
+    dialog._apply()
+    gui_window.update()
+    assert applied and applied[0].currency == moscow.currency
+    assert applied[0].tariff_per_kwh == moscow.price_on(today)
 
 
 def test_donate_dialog_copies_address_to_clipboard(gui_window):

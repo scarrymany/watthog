@@ -23,11 +23,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from pngwriter import write_png  # noqa: E402
 
 from watthog.gui.app import WattHogWindow  # noqa: E402
-from watthog.gui.dialogs import DonateDialog  # noqa: E402
+from watthog.gui.dialogs import DonateDialog, SettingsDialog  # noqa: E402
 from watthog.gui.theme import configure_appearance  # noqa: E402
 
 MEASUREMENT_SECONDS = 30
-TARIFF_PER_KWH = "6.5"
 SETTLE_SECONDS = 1.2
 _PW_RENDERFULLCONTENT = 0x00000002
 _BI_RGB = 0
@@ -133,8 +132,6 @@ def main() -> int:
 
     configure_appearance()
     window = WattHogWindow()
-    window._tariff_input.delete(0, "end")
-    window._tariff_input.insert(0, TARIFF_PER_KWH)
     window._duration_input.delete(0, "end")
     window._duration_input.insert(0, str(MEASUREMENT_SECONDS))
     window.update()
@@ -160,6 +157,11 @@ def main() -> int:
     pump(window, SETTLE_SECONDS)
     _capture_to(dialog.winfo_id(), output / "gui-donate.png")
     dialog.destroy()
+
+    settings = SettingsDialog(window, window._fonts, window._settings, lambda _settings: None)
+    pump(window, SETTLE_SECONDS)
+    _capture_to(settings.winfo_id(), output / "gui-settings.png")
+    settings.destroy()
 
     window.destroy()
     return 0

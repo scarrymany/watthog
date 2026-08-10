@@ -27,7 +27,9 @@ CAPTURE_DURATION_SECONDS = 30.0
 def main() -> int:
     output = Path(__file__).resolve().parents[1] / "docs"
     output.mkdir(parents=True, exist_ok=True)
-    settings = Settings(duration_seconds=int(CAPTURE_DURATION_SECONDS), tariff_per_kwh=6.5, save_reports=False)
+    # Тариф и валюта берутся по умолчанию, чтобы снимки показывали то же,
+    # что увидит пользователь после установки.
+    settings = Settings(duration_seconds=int(CAPTURE_DURATION_SECONDS), save_reports=False)
 
     with TelemetryReader(settings) as reader:
         meter = PowerMeter(reader.profile, settings)

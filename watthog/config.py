@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
 from watthog import constants as const
+from watthog.tariffs import DEFAULT_CURRENCY, DEFAULT_TARIFF_PER_KWH
 
 _CONFIG_DIRECTORY_NAME = "WattHog"
 _CONFIG_DIRECTORY_NAME_POSIX = "watthog"
@@ -52,8 +53,8 @@ class Settings:
 
     duration_seconds: int = const.DEFAULT_DURATION_SECONDS
     sample_interval: float = const.DEFAULT_SAMPLE_INTERVAL
-    tariff_per_kwh: float = 0.0
-    currency: str = const.DEFAULT_CURRENCY
+    tariff_per_kwh: float = DEFAULT_TARIFF_PER_KWH
+    currency: str = DEFAULT_CURRENCY
     psu_peak_efficiency: float = const.DEFAULT_PSU_PEAK_EFFICIENCY
     psu_rated_watts: int = const.DEFAULT_PSU_RATED_WATTS
     extra_devices_watts: float = 0.0
@@ -72,7 +73,7 @@ class Settings:
                 self.sample_interval, const.MIN_SAMPLE_INTERVAL, const.MAX_SAMPLE_INTERVAL
             ),
             tariff_per_kwh=_clamp(self.tariff_per_kwh, 0.0, MAX_TARIFF),
-            currency=(self.currency or const.DEFAULT_CURRENCY)[:8],
+            currency=(self.currency or DEFAULT_CURRENCY)[:8],
             psu_peak_efficiency=_clamp(
                 self.psu_peak_efficiency, const.MIN_PSU_EFFICIENCY, const.MAX_PSU_EFFICIENCY
             ),

@@ -97,5 +97,4 @@ CONSUMPTION_TIERS = (
     (float("inf"), "Ненасытный", "#ff4d4d"),
 )
 
-DEFAULT_CURRENCY = "₽"
 REPORT_FILENAME_FORMAT = "watthog-%Y%m%d-%H%M%S"

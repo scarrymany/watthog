@@ -85,3 +85,48 @@ def test_cli_run_command_completes(capsys):
 def test_cli_info_command_completes(capsys):
     assert main(["info"]) == 0
     assert "Источники данных" in capsys.readouterr().out
+
+
+def test_cli_tariffs_command_lists_the_reference(capsys):
+    assert main(["tariffs"]) == 0
+    output = capsys.readouterr().out
+    assert "Украина" in output
+    assert "Москва" in output
+
+
+def test_cli_preset_sets_price_and_currency(capsys):
+    exit_code = main(
+        [
+            "run",
+            "-d",
+            str(SHORT_DURATION_SECONDS),
+            "-i",
+            str(SHORT_INTERVAL_SECONDS),
+            "--preset",
+            "ru-msk-gas",
+            "--plain",
+            "--no-save",
+        ]
+    )
+    assert exit_code == 0
+    assert "Стоимость, ₽" in capsys.readouterr().out
+
+
+def test_cli_explicit_tariff_wins_over_preset(capsys):
+    exit_code = main(
+        [
+            "run",
+            "-d",
+            str(SHORT_DURATION_SECONDS),
+            "-i",
+            str(SHORT_INTERVAL_SECONDS),
+            "--preset",
+            "ru-msk-gas",
+            "--currency",
+            "€",
+            "--plain",
+            "--no-save",
+        ]
+    )
+    assert exit_code == 0
+    assert "Стоимость, €" in capsys.readouterr().out
