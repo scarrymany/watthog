@@ -18,16 +18,23 @@ from watthog.gui.app import _span_title  # noqa: E402
 from watthog.gui.widgets import BreakdownRow  # noqa: E402
 
 
-def display_available() -> bool:
+@pytest.fixture
+def tk_environment():
+    """Пропускает тест там, где Tk не работает.
+
+    Причин две: отсутствие экрана и повреждённая установка Tcl. Обе относятся к
+    окружению, а не к коду, и обе проявляются только при создании окна, поэтому
+    проверка делает ровно то же, что и сам тест, и делает это перед каждым.
+    """
     try:
-        root = tk.Tk()
-    except tk.TclError:
-        return False
-    root.destroy()
-    return True
+        probe = tk.Tk()
+        probe.update()
+        probe.destroy()
+    except tk.TclError as error:
+        pytest.skip(f"Tk недоступен в этом окружении: {error}")
 
 
-requires_display = pytest.mark.skipif(not display_available(), reason="нужен графический экран")
+requires_display = pytest.mark.usefixtures("tk_environment")
 
 
 def test_palette_gradient_covers_the_whole_range():
