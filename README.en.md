@@ -11,6 +11,7 @@
 [![Downloads](https://img.shields.io/github/downloads/scarrymany/watthog/total?style=for-the-badge&color=43d675&labelColor=161b22)](https://github.com/scarrymany/watthog/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge&labelColor=161b22)](LICENSE)
 [![Platform](https://img.shields.io/badge/Windows%20%7C%20Linux-161b22?style=for-the-badge&logo=windows&logoColor=ffd23f)](#installation)
+[![Currencies](https://img.shields.io/badge/₴%20₽%20$%20₸-4%20currencies-161b22?style=for-the-badge&labelColor=161b22&color=43d675)](#tariff)
 [![Telegram](https://img.shields.io/badge/@yeet17-161b22?style=for-the-badge&logo=telegram&logoColor=ffd23f)](https://t.me/yeet17)
 [![Donate](https://img.shields.io/badge/♥%20donate-161b22?style=for-the-badge&labelColor=161b22&color=ff4d4d)](DONATE.md)
 
@@ -50,7 +51,7 @@ report states plainly which part was measured and which part was computed.
 | ⚡ **Real sensors** | NVML for NVIDIA GPUs, RAPL for the CPU on Linux, hwmon for AMD and Intel GPUs, battery discharge rate on laptops |
 | 📊 **Live readings** | Current draw in large digits, per-component breakdown, chart across the whole run |
 | 🧮 **Projections** | 1 hour, 10 hours, 12 hours, a day, a week, a month - in kWh and in money at your tariff |
-| 💵 **Built-in tariffs** | Ready prices for Ukraine and Russia with effective dates; hryvnia and ruble switch in one click |
+| 💵 **4 currencies built in** | Hryvnia, ruble, dollar and tenge with ready tariffs for Ukraine, Russia, the USA and Kazakhstan - one click to switch |
 | 🔌 **Wall power, not DC** | PSU losses are added from an 80 PLUS efficiency curve, not a flat coefficient |
 | 🖥 **Windows and Linux** | Desktops, laptops, mini PCs. No administrator rights required |
 | 📦 **Single file** | Prebuilt binaries with no install and no Python. Or `pip install` if you prefer |
@@ -147,7 +148,7 @@ watthog run --preset ru-msk-gas      # bill at the Moscow rate
 | `-i`, `--interval SEC` | Sampling interval, default 0.5 |
 | `--tariff PRICE` | Price per kWh used for cost projections |
 | `--currency SIGN` | Currency symbol in the report |
-| `--preset KEY` | Built-in tariff: `ua`, `ua-night`, `ru-msk-gas`, `ru-msk-electric` |
+| `--preset KEY` | Built-in tariff: `ua`, `ua-night`, `ru-msk-gas`, `ru-msk-electric`, `kz-almaty`, `kz-almaty-2`, `us` |
 | `--json FILE` | Write the report to this path |
 | `--no-save` | Do not write to the reports directory |
 | `--plain` | No live dashboard, plain text output |
@@ -220,24 +221,30 @@ those reports feed straight back into the model.
 
 ## Tariff
 
+**Four currencies** are supported out of the box: hryvnia `₴`, ruble `₽`, dollar `$` and
+tenge `₸`. Each ships with a working tariff, so the cost is computed right after install.
+
 The default is the Ukrainian household rate, **4.32 ₴ per kWh** - a single nationwide
-price set by Cabinet of Ministers resolution No. 632 of 31.05.2024. Switching to rubles
-is one selection: the "Тариф из справочника" dropdown in the window, menu item **5** in
-the console, or `watthog tariffs`.
+price. Switching currency is one selection: the "Тариф из справочника" dropdown in the
+window, menu item **5** in the console, or `watthog tariffs`.
 
 | Key | Tariff | Price | Source |
 |---|---|---|---|
-| `ua` | Ukraine, households | **4.32 ₴** | CMU resolution No. 632 of 31.05.2024 |
-| `ua-night` | Ukraine, 23:00-07:00 | **2.16 ₴** | half the day rate on a two-zone meter |
-| `ru-msk-gas` | Moscow, gas stove | **8.00 ₽**, 8.90 ₽ from 01.10.2026 | Moscow Department of Economic Policy |
-| `ru-msk-electric` | Moscow, electric stove | **7.28 ₽**, 8.46 ₽ from 01.10.2026 | Moscow Department of Economic Policy |
+| `ua` | 🇺🇦 Ukraine, households | **4.32 ₴** | CMU resolution No. 632 of 31.05.2024 |
+| `ua-night` | 🇺🇦 Ukraine, 23:00-07:00 | **2.16 ₴** | half the day rate on a two-zone meter |
+| `ru-msk-gas` | 🇷🇺 Moscow, gas stove | **8.00 ₽**, 8.90 ₽ from 01.10.2026 | Moscow Department of Economic Policy |
+| `ru-msk-electric` | 🇷🇺 Moscow, electric stove | **7.28 ₽**, 8.46 ₽ from 01.10.2026 | Moscow Department of Economic Policy |
+| `kz-almaty` | 🇰🇿 Almaty, tier 1 | **29.34 ₸** | Alatau Zharyk Company, tiered household tariff |
+| `kz-almaty-2` | 🇰🇿 Almaty, tier 2 | **38.78 ₸** | above the consumption allowance |
+| `us` | 🇺🇸 USA, average | **0.1791 $** | EIA Electric Power Monthly, table 5.6.B |
 
 Each entry knows when its price takes effect, so after 1 October 2026 the app switches to
 the new Moscow rate on its own - no update needed.
 
 Tariffs depend on region, meter type, consumption tier and housing category, so the
 reference is a starting point, not the truth. Every value can be replaced with your own,
-currency included - it is a plain text field, not a two-item list.
+currency included - it is a plain text field, not a four-item list, so euro, zloty or any
+other sign works just as well.
 
 <div align="center">
 <img src="docs/gui-settings.png" width="520" alt="Settings and tariff picker">
@@ -253,7 +260,7 @@ currency included - it is a plain text field, not a two-item list.
 | `duration_seconds` | 60 | Run length |
 | `sample_interval` | 0.5 | Sampling interval |
 | `tariff_per_kwh` | 4.32 | Price per kWh |
-| `currency` | ₴ | Currency symbol |
+| `currency` | ₴ | Currency symbol: ₴, ₽, $, ₸ or your own |
 | `psu_peak_efficiency` | 0.90 | Peak PSU efficiency: Bronze 0.85, Gold 0.90, Platinum 0.92 |
 | `psu_rated_watts` | 650 | PSU rated power |
 | `extra_devices_watts` | 0 | Monitor, speakers, other peripherals |

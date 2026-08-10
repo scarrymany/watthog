@@ -12,7 +12,7 @@ import customtkinter as ctk
 from watthog import APP_NAME, AUTHOR_TELEGRAM, REPO_URL, __version__
 from watthog.config import Settings, config_path, save_settings
 from watthog.donate import DONATION_ADDRESSES, DONATION_NOTE, DonationAddress
-from watthog.formatting import format_watts, parse_number
+from watthog.formatting import format_price, format_watts, parse_number
 from watthog.gui.theme import (
     ACCENT,
     BACKGROUND,
@@ -248,7 +248,7 @@ class SettingsDialog(_Dialog):
         if upcoming is not None:
             hint += (
                 f"; с {upcoming.effective_from.strftime('%d.%m.%Y')} будет "
-                f"{upcoming.price:.2f} {preset.currency}"
+                f"{format_price(upcoming.price)} {preset.currency}"
             )
         self._preset_hint.configure(text=hint)
 
@@ -295,7 +295,7 @@ _INVALID = object()
 
 
 def _preset_label(preset: TariffPreset, today: date) -> str:
-    return f"{preset.region} - {preset.price_on(today):.2f} {preset.currency}"
+    return f"{preset.region} - {format_price(preset.price_on(today))} {preset.currency}"
 
 
 def _parse_field(field: _Field, raw: str) -> object:

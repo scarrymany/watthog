@@ -13,9 +13,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from math import isclose
 
 CURRENCY_HRYVNIA = "₴"
 CURRENCY_RUBLE = "₽"
+CURRENCY_DOLLAR = "$"
+CURRENCY_TENGE = "₸"
+
+# Валюты, для которых в справочнике есть готовые тарифы. Поле валюты остаётся
+# свободным текстом: сюда можно вписать любой знак, справочник лишь избавляет
+# от ручного ввода для самых частых случаев.
+SUPPORTED_CURRENCIES = (CURRENCY_HRYVNIA, CURRENCY_RUBLE, CURRENCY_DOLLAR, CURRENCY_TENGE)
 
 
 @dataclass(frozen=True)
@@ -90,6 +98,30 @@ TARIFF_PRESETS: tuple[TariffPreset, ...] = (
         rates=(TariffRate(7.28, date(2026, 1, 1)), TariffRate(8.46, date(2026, 10, 1))),
         source="Департамент экономической политики и развития Москвы",
     ),
+    TariffPreset(
+        key="kz-almaty",
+        region="Алматы, 1 уровень",
+        description="в пределах нормы потребления",
+        currency=CURRENCY_TENGE,
+        rates=(TariffRate(29.34, date(2026, 1, 1)),),
+        source="АО «Алатау Жарық Компаниясы», дифференцированный тариф для населения",
+    ),
+    TariffPreset(
+        key="kz-almaty-2",
+        region="Алматы, 2 уровень",
+        description="сверх нормы потребления",
+        currency=CURRENCY_TENGE,
+        rates=(TariffRate(38.78, date(2026, 1, 1)),),
+        source="АО «Алатау Жарық Компаниясы», дифференцированный тариф для населения",
+    ),
+    TariffPreset(
+        key="us",
+        region="США, в среднем",
+        description="жилые домохозяйства",
+        currency=CURRENCY_DOLLAR,
+        rates=(TariffRate(0.1791, date(2026, 1, 1)),),
+        source="EIA Electric Power Monthly, таблица 5.6.B",
+    ),
 )
 
 DEFAULT_PRESET_KEY = "ua"
@@ -115,10 +147,16 @@ def preset_keys() -> tuple[str, ...]:
 
 
 def match_preset(price: float, currency: str, today: date | None = None) -> TariffPreset | None:
-    """Справочный тариф, совпадающий с заданными ценой и валютой."""
+    """Справочный тариф, совпадающий с заданными ценой и валютой.
+
+    Сравнение относительное: цены отличаются на три порядка, от долей доллара
+    до десятков тенге, и единый абсолютный допуск для них не подходит.
+    """
     moment = today or date.today()
     for preset in TARIFF_PRESETS:
-        if preset.currency == currency and abs(preset.price_on(moment) - price) < 0.005:
+        if preset.currency != currency:
+            continue
+        if isclose(preset.price_on(moment), price, rel_tol=1e-4, abs_tol=1e-6):
             return preset
     return None
 

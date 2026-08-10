@@ -2,7 +2,7 @@
 
 APP_NAME = "WattHog"
 APP_TAGLINE = "измеритель прожорливости ПК"
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 AUTHOR_TELEGRAM = "@yeet17"
 REPO_URL = "https://github.com/scarrymany/watthog"
 

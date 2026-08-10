@@ -1,13 +1,17 @@
 from datetime import date
+from pathlib import Path
 
 import pytest
 
 from watthog.tariffs import (
+    CURRENCY_DOLLAR,
     CURRENCY_HRYVNIA,
     CURRENCY_RUBLE,
+    CURRENCY_TENGE,
     DEFAULT_CURRENCY,
     DEFAULT_PRESET_KEY,
     DEFAULT_TARIFF_PER_KWH,
+    SUPPORTED_CURRENCIES,
     TARIFF_PRESETS,
     TariffPreset,
     TariffRate,
@@ -17,6 +21,7 @@ from watthog.tariffs import (
     preset_keys,
 )
 
+ROOT = Path(__file__).resolve().parents[1]
 UKRAINE_PRICE = 4.32
 MOSCOW_GAS_PRICE_BEFORE_OCTOBER = 8.00
 MOSCOW_GAS_PRICE_FROM_OCTOBER = 8.90
@@ -86,10 +91,38 @@ def test_preset_keys_are_unique():
     assert len(keys) == len(set(keys)) == len(TARIFF_PRESETS)
 
 
+def test_reference_covers_exactly_four_currencies():
+    assert len(SUPPORTED_CURRENCIES) == 4
+    assert set(SUPPORTED_CURRENCIES) == {
+        CURRENCY_HRYVNIA,
+        CURRENCY_RUBLE,
+        CURRENCY_DOLLAR,
+        CURRENCY_TENGE,
+    }
+    covered = {preset.currency for preset in TARIFF_PRESETS}
+    assert covered == set(SUPPORTED_CURRENCIES), "у каждой заявленной валюты должен быть тариф"
+
+
+def test_dollar_and_tenge_tariffs_are_present():
+    dollar = find_preset("us")
+    tenge = find_preset("kz-almaty")
+    assert dollar is not None and dollar.currency == CURRENCY_DOLLAR
+    assert tenge is not None and tenge.currency == CURRENCY_TENGE
+    assert 0.0 < dollar.price_on(date(2026, 8, 10)) < 1.0
+    assert tenge.price_on(date(2026, 8, 10)) > 1.0
+
+
+def test_almaty_second_tier_is_dearer_than_the_first():
+    first, second = find_preset("kz-almaty"), find_preset("kz-almaty-2")
+    assert first is not None and second is not None
+    today = date(2026, 8, 10)
+    assert second.price_on(today) > first.price_on(today)
+
+
 @pytest.mark.parametrize("preset", TARIFF_PRESETS, ids=lambda preset: preset.key)
 def test_preset_data_is_sane(preset):
     assert preset.key and preset.region and preset.description and preset.source
-    assert preset.currency in (CURRENCY_HRYVNIA, CURRENCY_RUBLE)
+    assert preset.currency in SUPPORTED_CURRENCIES
     assert preset.rates, "у тарифа должна быть хотя бы одна ставка"
     assert all(rate.price > 0 for rate in preset.rates)
 
@@ -113,6 +146,28 @@ def test_match_preset_requires_matching_currency():
 
 def test_match_preset_returns_none_for_custom_price():
     assert match_preset(99.5, CURRENCY_HRYVNIA, date(2026, 8, 10)) is None
+
+
+def test_match_preset_is_precise_enough_for_small_prices():
+    today = date(2026, 8, 10)
+    dollar = find_preset("us")
+    assert dollar is not None
+    assert match_preset(dollar.price_on(today), CURRENCY_DOLLAR, today) is dollar
+    # Округление до двух знаков превратило бы 0.1791 в 0.18 - это уже не тариф
+    # из справочника, а собственное значение пользователя.
+    assert match_preset(0.18, CURRENCY_DOLLAR, today) is None
+
+
+@pytest.mark.parametrize("readme", ["README.md", "README.en.md"])
+def test_readme_documents_every_preset_and_currency(readme):
+    """Обещание про четыре валюты должно подтверждаться справочником."""
+    text = (ROOT / readme).read_text(encoding="utf-8")
+
+    for preset in TARIFF_PRESETS:
+        assert f"`{preset.key}`" in text, f"{readme}: не описан ключ {preset.key}"
+    for currency in SUPPORTED_CURRENCIES:
+        assert currency in text, f"{readme}: не упомянута валюта {currency}"
+    assert "4 валюты" in text or "4 currencies" in text
 
 
 def test_night_tariff_is_cheaper_than_the_day_one():

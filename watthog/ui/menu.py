@@ -16,7 +16,7 @@ from watthog import APP_TAGLINE, AUTHOR_TELEGRAM, REPO_URL, __version__
 from watthog import constants as const
 from watthog.config import Settings, config_path, save_settings
 from watthog.donate import DONATION_ADDRESSES, DONATION_NOTE
-from watthog.formatting import parse_number
+from watthog.formatting import format_price, parse_number
 from watthog.tariffs import TARIFF_PRESETS, match_preset
 
 _LOGO = (
@@ -170,12 +170,12 @@ def tariffs_panel(settings: Settings | None = None) -> RenderableType:
         if upcoming is not None:
             note += (
                 f", с {upcoming.effective_from.strftime('%d.%m.%Y')} будет "
-                f"{upcoming.price:.2f} {preset.currency}"
+                f"{format_price(upcoming.price)} {preset.currency}"
             )
         table.add_row(
             Text(f"[{index}]", style="app.accent"),
             Text(("● " if chosen else "  ") + preset.region, style="app.accent" if chosen else "app.value"),
-            Text(f"{preset.price_on(today):.2f} {preset.currency}", style="app.value"),
+            Text(f"{format_price(preset.price_on(today))} {preset.currency}", style="app.value"),
             Text(note, style="app.muted"),
         )
 
@@ -223,7 +223,7 @@ def pick_tariff(console: Console, settings: Settings) -> Settings:
     save_settings(updated)
     console.print(
         Text(
-            f"Тариф: {updated.tariff_per_kwh:.2f} {updated.currency} за кВт·ч ({preset.region})",
+            f"Тариф: {format_price(updated.tariff_per_kwh)} {updated.currency} за кВт·ч ({preset.region})",
             style="app.ok",
         )
     )

@@ -16,6 +16,7 @@ from rich.text import Text
 from watthog import AUTHOR_TELEGRAM, REPO_URL, __version__
 from watthog import constants as const
 from watthog.config import reports_directory
+from watthog.formatting import format_money
 from watthog.inventory import HardwareProfile
 from watthog.meter import ACCURACY_DETAILS
 from watthog.projections import Projection, build_projections, consumption_tier
@@ -106,7 +107,9 @@ def _highlight_card(projection: Projection, currency: str) -> Panel:
         )
     ]
     if projection.cost is not None:
-        lines.append(Text.assemble((f"{projection.cost:,.2f} ".replace(",", " "), "app.value"), (currency, "app.unit")))
+        lines.append(
+            Text.assemble((f"{format_money(projection.cost)} ", "app.value"), (currency, "app.unit"))
+        )
     return Panel(
         Group(*lines),
         title=f"[app.label]За {projection.label}",
@@ -175,7 +178,7 @@ def _projections_panel(result: SessionResult, projections: tuple[Projection, ...
     for projection in projections:
         row = [projection.label, f"{format_kwh(projection.kwh)} кВт·ч"]
         if tariff > 0.0:
-            row.append(f"{projection.cost:,.2f}".replace(",", " "))
+            row.append(format_money(projection.cost))
         table.add_row(*row)
 
     subtitle = Text.assemble(

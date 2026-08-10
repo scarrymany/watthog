@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 _NUMBER_PATTERN = re.compile(r"-?\d+(?:\.\d+)?")
+THOUSANDS_SEPARATOR = " "
 _HARDWARE_NOISE_PATTERN = re.compile(
     r"\(R\)|\(TM\)|\bCPU\b|\bProcessor\b|\d+-Core|@.*$", re.IGNORECASE
 )
@@ -34,8 +35,23 @@ def format_kwh(kwh: float) -> str:
 
 
 def format_money(amount: float) -> str:
-    """Сумма с разделителем разрядов обычным пробелом."""
-    return f"{amount:,.2f}".replace(",", " ")
+    """Сумма с неразрывным пробелом между разрядами.
+
+    Пробел именно неразрывный, чтобы число не разорвалось переносом строки.
+    """
+    return f"{amount:,.2f}".replace(",", THOUSANDS_SEPARATOR)
+
+
+def format_price(price: float) -> str:
+    """Цена киловатт-часа с уместным числом знаков.
+
+    Тарифы разных стран отличаются на три порядка: десятки тенге и доли
+    доллара. Двух знаков хватает для первых, но округлило бы вторые до
+    неразличимости.
+    """
+    if price >= 1.0:
+        return f"{price:.2f}"
+    return f"{price:.4f}".rstrip("0").rstrip(".")
 
 
 def parse_number(text: str) -> float | None:
