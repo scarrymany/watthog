@@ -1,4 +1,4 @@
-# Ресурс версии для исполняемого файла Windows.
+# Ресурс версии для оконной сборки Windows.
 VSVersionInfo(
   ffi=FixedFileInfo(
     filevers=(1, 1, 0, 0),
@@ -17,11 +17,11 @@ VSVersionInfo(
           '040904B0',
           [
             StringStruct('CompanyName', 'yeet17'),
-            StringStruct('FileDescription', 'WattHog - измеритель энергопотребления ПК'),
+            StringStruct('FileDescription', 'WattHog - измеритель энергопотребления ПК, оконная версия'),
             StringStruct('FileVersion', '1.1.0'),
-            StringStruct('InternalName', 'WattHog'),
+            StringStruct('InternalName', 'WattHog-GUI'),
             StringStruct('LegalCopyright', 'Copyright (c) 2026 yeet17. MIT License.'),
-            StringStruct('OriginalFilename', 'WattHog.exe'),
+            StringStruct('OriginalFilename', 'WattHog-GUI.exe'),
             StringStruct('ProductName', 'WattHog'),
             StringStruct('ProductVersion', '1.1.0'),
           ],

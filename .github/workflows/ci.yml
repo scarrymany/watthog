@@ -40,12 +40,24 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
 
+      # Оконному интерфейсу нужны библиотеки Tk, а тестам - виртуальный экран.
+      - name: Установка Tk и виртуального экрана
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk tk xvfb
+
       - name: Установка зависимостей
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Тесты
+      - name: Тесты (Linux, с виртуальным экраном)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a python -m pytest
+
+      - name: Тесты (Windows)
+        if: runner.os == 'Windows'
         run: python -m pytest
 
       - name: Проверка определения железа
@@ -71,12 +83,18 @@ jobs:
           python-version: "3.12"
           cache: pip
 
+      - name: Установка Tk
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk tk
+
       - name: Установка зависимостей
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Сборка исполняемого файла
+      - name: Сборка исполняемых файлов
         run: python -m PyInstaller --noconfirm --clean packaging/watthog.spec
 
       - name: Проверка сборки (Windows)
@@ -84,10 +102,12 @@ jobs:
         run: |
           ./dist/WattHog.exe --version
           ./dist/WattHog.exe run --duration 3 --interval 0.5 --plain --no-save
+          if (-not (Test-Path ./dist/WattHog-GUI.exe)) { throw "оконная сборка не создана" }
 
       - name: Проверка сборки (Linux)
         if: runner.os == 'Linux'
         run: |
-          chmod +x dist/WattHog
+          chmod +x dist/WattHog dist/WattHog-GUI
           ./dist/WattHog --version
           ./dist/WattHog run --duration 3 --interval 0.5 --plain --no-save
+          test -f dist/WattHog-GUI

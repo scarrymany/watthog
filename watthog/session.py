@@ -49,6 +49,7 @@ class SessionResult:
 
 
 SampleCallback = Callable[[Sample, float], None]
+StopCheck = Callable[[], bool]
 
 
 class MeasurementSession:
@@ -59,7 +60,18 @@ class MeasurementSession:
         self._meter = meter
         self._settings = settings
 
-    def run(self, duration_seconds: float, on_sample: SampleCallback | None = None) -> SessionResult:
+    def run(
+        self,
+        duration_seconds: float,
+        on_sample: SampleCallback | None = None,
+        stop_requested: StopCheck | None = None,
+    ) -> SessionResult:
+        """Проводит замер.
+
+        ``stop_requested`` опрашивается перед каждой выборкой и позволяет
+        прервать замер снаружи: в консоли это Ctrl+C, в оконном интерфейсе -
+        кнопка остановки. Уже собранные выборки при этом не теряются.
+        """
         interval = self._settings.sample_interval
         total_ticks = max(1, round(duration_seconds / interval))
         started_at = datetime.now()
@@ -70,6 +82,9 @@ class MeasurementSession:
         try:
             for tick in range(1, total_ticks + 1):
                 _sleep_until(start + tick * interval)
+                if stop_requested is not None and stop_requested():
+                    interrupted = True
+                    break
                 telemetry = self._reader.read()
                 breakdown = self._meter.measure(telemetry)
                 sample = Sample(

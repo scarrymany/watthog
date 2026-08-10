@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import replace
 
 from rich.align import Align
@@ -15,6 +14,8 @@ from rich.text import Text
 from watthog import APP_TAGLINE, AUTHOR_TELEGRAM, REPO_URL, __version__
 from watthog import constants as const
 from watthog.config import Settings, config_path, save_settings
+from watthog.donate import DONATION_ADDRESSES, DONATION_NOTE
+from watthog.formatting import parse_number
 
 _LOGO = (
     "██╗    ██╗ █████╗ ████████╗████████╗██╗  ██╗ ██████╗  ██████╗ ",
@@ -28,21 +29,24 @@ _LOGO_MIN_WIDTH = 66
 _AUTO = "авто"
 _AUTO_INPUT_VALUES = frozenset({"авто", "auto", "-", ""})
 _AFFIRMATIVE_INPUT_VALUES = frozenset({"да", "yes", "y", "1", "true", "on"})
-_NUMBER_PATTERN = re.compile(r"-?\d+(?:\.\d+)?")
 
 MENU_RUN = "1"
 MENU_RUN_CUSTOM = "2"
-MENU_SETTINGS = "3"
-MENU_HARDWARE = "4"
-MENU_ABOUT = "5"
+MENU_GUI = "3"
+MENU_SETTINGS = "4"
+MENU_HARDWARE = "5"
+MENU_ABOUT = "6"
+MENU_DONATE = "7"
 MENU_EXIT = "0"
 
 _MENU_ITEMS = (
     (MENU_RUN, "Запустить замер", "тест длительностью {duration} с"),
     (MENU_RUN_CUSTOM, "Замер другой длительности", "указать время вручную"),
+    (MENU_GUI, "Оконный интерфейс", "то же самое, но в окне"),
     (MENU_SETTINGS, "Настройки", "тариф, блок питания, калибровка"),
     (MENU_HARDWARE, "Железо и источники данных", "что найдено и что измеряется"),
     (MENU_ABOUT, "О программе", "как считается мощность"),
+    (MENU_DONATE, "Поддержать проект", "реквизиты в криптовалюте"),
     (MENU_EXIT, "Выход", ""),
 )
 
@@ -140,6 +144,30 @@ def about_panel() -> RenderableType:
     text.append("   ·   ", style="app.muted")
     text.append(REPO_URL, style="app.muted")
     return Panel(text, title="[app.label]О программе", border_style="app.border", padding=(1, 2))
+
+
+def donate_panel() -> RenderableType:
+    """Реквизиты для поддержки проекта."""
+    table = Table.grid(padding=(0, 2))
+    table.add_column(justify="left", width=10)
+    table.add_column(justify="left", width=11)
+    table.add_column(justify="left")
+
+    for donation in DONATION_ADDRESSES:
+        table.add_row(
+            Text(donation.network, style="app.label"),
+            Text(donation.asset, style="app.muted"),
+            Text(donation.address, style="app.accent"),
+        )
+
+    body = Group(
+        Text(DONATION_NOTE, style="app.muted"),
+        Text(""),
+        table,
+        Text(""),
+        Text.assemble(("Спасибо. ", "app.muted"), (AUTHOR_TELEGRAM, "app.accent")),
+    )
+    return Panel(body, title="[app.label]Поддержать проект", border_style="app.accent", padding=(1, 2))
 
 
 def edit_settings(console: Console, settings: Settings) -> Settings:
@@ -256,12 +284,9 @@ def _parse_value(raw: str, field: _Field) -> object:
     if field.kind == "text":
         return raw
 
-    # Пользователь легко повторит подсказанную единицу измерения ("650 Вт"),
-    # поэтому из строки берётся первое число, а остальное отбрасывается.
-    match = _NUMBER_PATTERN.search(raw.replace(",", "."))
-    if match is None:
+    number = parse_number(raw)
+    if number is None:
         raise ValueError(f"в строке {raw!r} нет числа")
-    number = float(match.group())
 
     if field.kind == "int":
         return int(number)

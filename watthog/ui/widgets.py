@@ -4,16 +4,22 @@ from __future__ import annotations
 
 from rich.text import Text
 
+from watthog.formatting import chart_bounds, format_kwh, format_watts
 from watthog.ui.theme import gradient_color
 
 _BAR_FULL = "█"
 _BAR_EMPTY = "░"
 _PARTIAL_BLOCKS = " ▁▂▃▄▅▆▇█"
 
-# Ниже этой доли разброса график переключается на суженную шкалу.
-_CHART_ZOOM_THRESHOLD = 0.25
-_CHART_HEADROOM = 1.15
-_CHART_MIN_MARGIN_RATIO = 0.02
+__all__ = [
+    "area_chart",
+    "big_number",
+    "chart_bounds",
+    "format_kwh",
+    "format_watts",
+    "gauge",
+    "progress_bar",
+]
 
 # Шрифт для крупного вывода текущей мощности: пять строк на символ.
 _BIG_GLYPHS: dict[str, tuple[str, ...]] = {
@@ -33,23 +39,6 @@ _BIG_GLYPHS: dict[str, tuple[str, ...]] = {
     " ": ("  ", "  ", "  ", "  ", "  "),
 }
 _BIG_GLYPH_HEIGHT = 5
-
-
-def format_watts(watts: float) -> str:
-    """Ватты с разумным числом знаков: сотни без дробной части, единицы с одним знаком."""
-    if watts >= 100.0:
-        return f"{watts:.0f}"
-    if watts >= 10.0:
-        return f"{watts:.1f}"
-    return f"{watts:.2f}"
-
-
-def format_kwh(kwh: float) -> str:
-    if kwh >= 100.0:
-        return f"{kwh:.1f}"
-    if kwh >= 1.0:
-        return f"{kwh:.2f}"
-    return f"{kwh:.3f}"
 
 
 def big_number(value: str, style: str) -> Text:
@@ -76,28 +65,6 @@ def gauge(value: float, maximum: float, width: int) -> Text:
     if filled < width:
         bar.append(_BAR_EMPTY * (width - filled), style="app.border")
     return bar
-
-
-def chart_bounds(values: list[float]) -> tuple[float, float]:
-    """Границы вертикальной шкалы графика.
-
-    При заметном разбросе шкала начинается с нуля - так видно абсолютный
-    уровень. Если же мощность почти не меняется, нулевая шкала превратила бы
-    график в сплошную заливку, поэтому окно сужается вокруг данных, а его
-    границы подписываются рядом с графиком.
-    """
-    if not values:
-        return 0.0, 1.0
-    low, high = min(values), max(values)
-    if high <= 0.0:
-        return 0.0, 1.0
-
-    span = high - low
-    if span / high >= _CHART_ZOOM_THRESHOLD:
-        return 0.0, high * _CHART_HEADROOM
-
-    margin = max(span, high * _CHART_MIN_MARGIN_RATIO)
-    return max(0.0, low - margin * 0.8), high + margin * 0.4
 
 
 def area_chart(

@@ -28,6 +28,18 @@ COMMAND_RUN = "run"
 COMMAND_INFO = "info"
 COMMAND_CONFIG = "config"
 COMMAND_MENU = "menu"
+COMMAND_GUI = "gui"
+
+_GUI_MISSING_HINT = (
+    "Оконный интерфейс недоступен: {error}.\n"
+    "В Linux поставьте системный пакет python3-tk, затем при необходимости "
+    "выполните pip install customtkinter."
+)
+_GUI_MISSING_IN_BUNDLE_HINT = (
+    "В этой сборке оконного интерфейса нет: она консольная и потому компактная.\n"
+    "Скачайте отдельный файл {executable} со страницы релизов: {url}/releases/latest"
+)
+_GUI_EXECUTABLE_NAME = "WattHog-GUI.exe" if sys.platform == "win32" else "watthog-gui"
 
 _PLAIN_REPORT_EVERY_SECONDS = 5.0
 _UNSUPPORTED_PLATFORM_EXIT_CODE = 2
@@ -43,10 +55,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "command",
         nargs="?",
-        choices=[COMMAND_RUN, COMMAND_INFO, COMMAND_CONFIG, COMMAND_MENU],
+        choices=[COMMAND_RUN, COMMAND_INFO, COMMAND_CONFIG, COMMAND_GUI, COMMAND_MENU],
         default=None,
         help="run - сразу запустить замер, info - показать железо и источники, "
-        "config - открыть настройки. Без команды запускается меню.",
+        "config - открыть настройки, gui - открыть оконный интерфейс. "
+        "Без команды запускается меню.",
     )
     parser.add_argument(
         "-d",
@@ -99,7 +112,27 @@ def main(argv: list[str] | None = None) -> int:
     if command == COMMAND_CONFIG:
         menu_ui.edit_settings(console, settings)
         return 0
+    if command == COMMAND_GUI:
+        return _command_gui(console)
     return _command_menu(console, settings, args)
+
+
+def _command_gui(console: Console) -> int:
+    """Запуск оконного интерфейса из консольной сборки.
+
+    Импорт отложен: tkinter есть не в каждой сборке Python, и консольная версия
+    должна работать даже там, где оконная недоступна.
+    """
+    try:
+        from watthog.gui.app import main as run_gui
+    except ImportError as error:
+        if getattr(sys, "frozen", False):
+            message = _GUI_MISSING_IN_BUNDLE_HINT.format(executable=_GUI_EXECUTABLE_NAME, url=REPO_URL)
+        else:
+            message = _GUI_MISSING_HINT.format(error=error)
+        console.print(Text(message, style="app.bad"))
+        return 1
+    return run_gui()
 
 
 def _apply_overrides(settings: Settings, args: argparse.Namespace) -> Settings:
@@ -156,10 +189,14 @@ def _command_menu(console: Console, settings: Settings, args: argparse.Namespace
                 _store_report(console, result, args.json_path)
         elif choice == menu_ui.MENU_SETTINGS:
             settings = menu_ui.edit_settings(console, settings)
+        elif choice == menu_ui.MENU_GUI:
+            _command_gui(console)
         elif choice == menu_ui.MENU_HARDWARE:
             _command_info(console, settings)
         elif choice == menu_ui.MENU_ABOUT:
             console.print(menu_ui.about_panel())
+        elif choice == menu_ui.MENU_DONATE:
+            console.print(menu_ui.donate_panel())
 
         if not _pause(console):
             return 0

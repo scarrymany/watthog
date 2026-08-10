@@ -12,10 +12,11 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge&labelColor=161b22)](LICENSE)
 [![Platform](https://img.shields.io/badge/Windows%20%7C%20Linux-161b22?style=for-the-badge&logo=windows&logoColor=ffd23f)](#установка)
 [![Telegram](https://img.shields.io/badge/@yeet17-161b22?style=for-the-badge&logo=telegram&logoColor=ffd23f)](https://t.me/yeet17)
+[![Donate](https://img.shields.io/badge/♥%20поддержать-161b22?style=for-the-badge&labelColor=161b22&color=ff4d4d)](DONATE.md)
 
-[Установка](#установка) · [Как пользоваться](#как-пользоваться) · [Как это работает](#как-это-работает) · [Точность](#точность) · [Настройки](#настройки) · [English](README.en.md)
+[Установка](#установка) · [Два интерфейса](#два-интерфейса) · [Как пользоваться](#как-пользоваться) · [Как это работает](#как-это-работает) · [Точность](#точность) · [Поддержать](#поддержать-проект) · [English](README.en.md)
 
-<img src="docs/dashboard.svg" width="900" alt="Живая панель WattHog">
+<img src="docs/gui.png" width="920" alt="Оконный интерфейс WattHog">
 
 </div>
 
@@ -42,14 +43,45 @@
 
 | | |
 |---|---|
+| 🪟 **Два интерфейса** | Окно без консоли и полноценный текстовый интерфейс в терминале - на выбор |
 | ⚡ **Реальные датчики** | NVML для видеокарт NVIDIA, RAPL для процессора в Linux, hwmon для AMD и Intel, разряд батареи на ноутбуке |
-| 📊 **Живая панель** | Текущая мощность крупно, разбивка по компонентам, график за всё время замера |
+| 📊 **Живые показания** | Текущая мощность крупно, разбивка по компонентам, график за всё время замера |
 | 🧮 **Прогноз расхода** | Час, 10 часов, 12 часов, сутки, неделя, месяц - в киловатт-часах и в деньгах по вашему тарифу |
 | 🔌 **Считает от розетки** | К потреблению железа добавляются потери блока питания по кривой КПД, а не по одному коэффициенту |
 | 🖥 **Windows и Linux** | Десктопы, ноутбуки, мини-ПК. Права администратора не нужны |
-| 📦 **Один файл** | `WattHog.exe` без установки и без Python. Или `pip install`, если так удобнее |
+| 📦 **Один файл** | Готовые сборки без установки и без Python. Или `pip install`, если так удобнее |
 | 📁 **Отчёты в JSON** | Каждый замер сохраняется целиком: статистика, разбивка, железо, источники данных |
 | 🎛 **Калибровка** | Знаете реальные цифры своей системы - впишите их в настройки, и модель станет точнее |
+
+## Два интерфейса
+
+Обе версии считают абсолютно одинаково: у них общий движок замера, общая модель мощности
+и общий формат отчёта. Отличается только подача.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**Оконная версия** - `WattHog-GUI.exe`
+
+Запускается двойным кликом, консоли нет. Крупные показания, кнопка запуска, копирование
+адресов поддержки в один клик.
+
+</td>
+<td width="50%" valign="top">
+
+**Консольная версия** - `WattHog.exe`
+
+Живая панель прямо в терминале, меню, работа по SSH и в скриптах. Есть ключи командной
+строки и вывод отчёта в JSON.
+
+</td>
+</tr>
+</table>
+
+<div align="center">
+<img src="docs/dashboard.svg" width="920" alt="Живая панель консольной версии">
+</div>
 
 ## Установка
 
@@ -63,14 +95,21 @@ irm https://raw.githubusercontent.com/scarrymany/watthog/main/install.ps1 | iex
 Права администратора не нужны. После установки откройте новый терминал и наберите `WattHog`.
 
 <details>
-<summary>Или просто скачать exe вручную</summary>
+<summary>Или скачать нужный файл вручную</summary>
+
+Оконная версия, без консоли:
+
+```powershell
+curl.exe -L -o WattHog-GUI.exe https://github.com/scarrymany/watthog/releases/latest/download/WattHog-GUI.exe
+```
+
+Консольная версия:
 
 ```powershell
 curl.exe -L -o WattHog.exe https://github.com/scarrymany/watthog/releases/latest/download/WattHog.exe
-.\WattHog.exe
 ```
 
-Файл самодостаточный: Python и библиотеки внутри.
+Файлы самодостаточные: Python и библиотеки внутри.
 </details>
 
 ### Linux: одна команда
@@ -80,14 +119,15 @@ curl -fsSL https://raw.githubusercontent.com/scarrymany/watthog/main/install.sh 
 ```
 
 Поставит через `pipx`, а если его нет - в отдельное окружение в `~/.local/share/watthog`
-со ссылкой в `~/.local/bin`.
+со ссылкой в `~/.local/bin`. Появятся обе команды: `watthog` и `watthog-gui`.
 
 <details>
-<summary>Или готовый бинарник без Python</summary>
+<summary>Или готовые бинарники без Python</summary>
 
 ```bash
 curl -fsSL -o watthog https://github.com/scarrymany/watthog/releases/latest/download/watthog-linux-x86_64
-chmod +x watthog
+curl -fsSL -o watthog-gui https://github.com/scarrymany/watthog/releases/latest/download/watthog-gui-linux-x86_64
+chmod +x watthog watthog-gui
 ./watthog
 ```
 </details>
@@ -100,19 +140,39 @@ pipx install git+https://github.com/scarrymany/watthog.git
 pip install git+https://github.com/scarrymany/watthog.git
 ```
 
+В Linux оконной версии нужен системный пакет `python3-tk`:
+
+```bash
+sudo apt install python3-tk     # Debian, Ubuntu
+sudo dnf install python3-tkinter # Fedora
+```
+
 ### Из исходников
 
 ```bash
 git clone https://github.com/scarrymany/watthog.git
 cd watthog
 pip install -e ".[dev]"
-python -m watthog
+python -m watthog          # консольная версия
+python -m watthog.gui      # оконная версия
 ```
 
 > **macOS не поддерживается.** Там нет ни RAPL, ни аналога счётчиков PDH, а без них
 > измерять нечем - честной цифры не получится, а рисовать выдуманную программа не будет.
 
 ## Как пользоваться
+
+### Окно
+
+```bash
+watthog-gui        # или двойной клик по WattHog-GUI.exe
+watthog gui        # то же самое из консольной версии
+```
+
+Впишите длительность и тариф, нажмите «Запустить замер». Во время замера кнопка
+превращается в «Остановить», уже собранные выборки при этом не теряются.
+
+### Консоль
 
 Без аргументов открывается меню:
 
@@ -149,16 +209,10 @@ watthog config                       # настройки
 
 </details>
 
-### Итоговый отчёт
+### Итоговый отчёт в консоли
 
 <div align="center">
-<img src="docs/report.svg" width="900" alt="Итоговый отчёт WattHog">
-</div>
-
-### Что нашлось на машине
-
-<div align="center">
-<img src="docs/hardware.svg" width="900" alt="Железо и источники данных">
+<img src="docs/report.svg" width="920" alt="Итоговый отчёт WattHog">
 </div>
 
 ## Как это работает
@@ -234,7 +288,7 @@ P = P_простой + (P_пик - P_простой) · загрузка^0.55 ·
 
 ## Настройки
 
-Меняются в меню (`watthog config`) и лежат в JSON:
+Меняются в окне (кнопка «Настройки»), в консольном меню (`watthog config`) и лежат в JSON:
 
 - Windows: `%APPDATA%\WattHog\config.json`
 - Linux: `~/.config/watthog/config.json`
@@ -263,7 +317,7 @@ P = P_простой + (P_пик - P_простой) · загрузка^0.55 ·
 ```json
 {
   "app": "WattHog",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "started_at": "2026-08-09T14:21:07",
   "duration_seconds": 60.0,
   "sample_count": 120,
@@ -307,10 +361,18 @@ python tools/make_icon.py                                 # иконка
 python -m PyInstaller --noconfirm --clean packaging/watthog.spec
 ```
 
-Готовый файл появится в `dist/`. Релизные сборки для Windows и Linux собирает
-[GitHub Actions](.github/workflows/release.yml) по тегу.
+В `dist/` появятся оба файла: консольный и оконный. Релизные сборки для Windows и Linux
+собирает [GitHub Actions](.github/workflows/release.yml) по тегу.
 
 ## Вопросы
+
+<details>
+<summary>Чем оконная версия отличается от консольной?</summary>
+
+Только подачей. Движок замера, модель мощности и формат отчёта у них общие, поэтому
+цифры совпадают до последнего знака. Оконная версия удобнее на своём компьютере,
+консольная - по SSH и в скриптах.
+</details>
 
 <details>
 <summary>Почему цифра отличается от того, что показывает MSI Afterburner?</summary>
@@ -338,8 +400,9 @@ Afterburner показывает мощность видеокарты, а WattH
 <details>
 <summary>Можно ли мерить дольше минуты?</summary>
 
-Да, `watthog run -d 3600` измеряет час. Минута - разумное значение по умолчанию: этого
-хватает, чтобы усреднить дрожание нагрузки, и не приходится долго ждать.
+Да, `watthog run -d 3600` измеряет час, в окне достаточно вписать нужное число секунд.
+Минута - разумное значение по умолчанию: этого хватает, чтобы усреднить дрожание
+нагрузки, и не приходится долго ждать.
 </details>
 
 <details>
@@ -348,6 +411,27 @@ Afterburner показывает мощность видеокарты, а WattH
 Нет. Ни телеметрии, ни проверки обновлений, ни единого сетевого запроса. Всё считается
 локально, отчёты остаются на диске.
 </details>
+
+## Поддержать проект
+
+Программа бесплатная, с открытым кодом, без рекламы и без сбора данных. Если она
+оказалась полезной, поддержать можно криптовалютой:
+
+| Сеть | Монеты | Адрес |
+|---|---|---|
+| **TRC20** | USDT, TRX | `TLEzifd4zGRtHt4JbMhXKrzM2bMfNj6YTM` |
+| **BEP20** | USDT, BNB | `0x5DC287eeae44d140AcF80Ea20D695A6A1De9Ba8d` |
+| **TON** | Toncoin | `UQB2w5UGye1nw0yQGQrPPkeIdwWZ1_2iwRX6fLgh5iMn1vDk` |
+| **Litecoin** | LTC | `ltc1q9384p272katyss6s7ugeez8vdkm49jtxktyheu` |
+| **Bitcoin** | BTC | `bc1q5w8ynurd6urjkxzhy9z6av65cauc3culy60get` |
+
+Те же реквизиты есть внутри программы: в окне это кнопка **♥ Поддержать** с копированием
+в буфер обмена, в консоли - пункт меню **7**. Подробности и способы помочь без денег -
+в [DONATE.md](DONATE.md).
+
+<div align="center">
+<img src="docs/gui-donate.png" width="560" alt="Окно поддержки проекта">
+</div>
 
 ## Вклад
 
@@ -361,7 +445,7 @@ Afterburner показывает мощность видеокарты, а WattH
 
 <div align="center">
 
-Сделано [@yeet17](https://t.me/yeet17) · [Telegram](https://t.me/yeet17)
+Сделано [@yeet17](https://t.me/yeet17) · [Telegram](https://t.me/yeet17) · [Поддержать](DONATE.md)
 
 Если программа оказалась полезной, поставьте звезду ⭐
 

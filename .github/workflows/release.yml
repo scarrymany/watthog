@@ -17,11 +17,15 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            built: dist/WattHog.exe
-            asset: WattHog.exe
+            console_built: dist/WattHog.exe
+            console_asset: WattHog.exe
+            gui_built: dist/WattHog-GUI.exe
+            gui_asset: WattHog-GUI.exe
           - os: ubuntu-latest
-            built: dist/WattHog
-            asset: watthog-linux-x86_64
+            console_built: dist/WattHog
+            console_asset: watthog-linux-x86_64
+            gui_built: dist/WattHog-GUI
+            gui_asset: watthog-gui-linux-x86_64
 
     steps:
       - uses: actions/checkout@v7
@@ -31,15 +35,26 @@ jobs:
           python-version: "3.12"
           cache: pip
 
+      - name: Установка Tk и виртуального экрана
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk tk xvfb
+
       - name: Установка зависимостей
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Тесты
+      - name: Тесты (Linux, с виртуальным экраном)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a python -m pytest
+
+      - name: Тесты (Windows)
+        if: runner.os == 'Windows'
         run: python -m pytest
 
-      - name: Сборка исполняемого файла
+      - name: Сборка исполняемых файлов
         run: python -m PyInstaller --noconfirm --clean packaging/watthog.spec
 
       - name: Проверка сборки (Windows)
@@ -47,24 +62,27 @@ jobs:
         run: |
           ./dist/WattHog.exe --version
           ./dist/WattHog.exe run --duration 3 --interval 0.5 --plain --no-save
+          if (-not (Test-Path ./dist/WattHog-GUI.exe)) { throw "оконная сборка не создана" }
 
       - name: Проверка сборки (Linux)
         if: runner.os == 'Linux'
         run: |
-          chmod +x dist/WattHog
+          chmod +x dist/WattHog dist/WattHog-GUI
           ./dist/WattHog --version
           ./dist/WattHog run --duration 3 --interval 0.5 --plain --no-save
+          test -f dist/WattHog-GUI
 
-      - name: Подготовка артефакта
+      - name: Подготовка артефактов
         shell: bash
         run: |
           mkdir -p release
-          cp "${{ matrix.built }}" "release/${{ matrix.asset }}"
+          cp "${{ matrix.console_built }}" "release/${{ matrix.console_asset }}"
+          cp "${{ matrix.gui_built }}" "release/${{ matrix.gui_asset }}"
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.asset }}
-          path: release/${{ matrix.asset }}
+          name: binaries-${{ matrix.os }}
+          path: release/*
           if-no-files-found: error
 
   publish:

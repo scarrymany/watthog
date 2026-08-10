@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "watthog"
-version = "1.0.2"
+version = "1.1.0"
 description = "Консольный измеритель энергопотребления ПК: сколько ватт система ест прямо сейчас и во что это выльется за сутки"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -37,13 +37,16 @@ classifiers = [
     "Topic :: System :: Hardware",
     "Topic :: System :: Monitoring",
 ]
-dependencies = ["psutil>=5.9", "rich>=13.0"]
+dependencies = ["psutil>=5.9", "rich>=13.0", "customtkinter>=5.2"]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "pyinstaller>=6.0", "ruff>=0.6"]
 
 [project.scripts]
 watthog = "watthog.cli:main"
+
+[project.gui-scripts]
+watthog-gui = "watthog.gui.app:main"
 
 [project.urls]
 Homepage = "https://github.com/scarrymany/watthog"
@@ -52,7 +55,7 @@ Issues = "https://github.com/scarrymany/watthog/issues"
 Changelog = "https://github.com/scarrymany/watthog/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
-packages = ["watthog", "watthog.ui"]
+packages = ["watthog", "watthog.ui", "watthog.gui"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

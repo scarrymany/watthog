@@ -48,13 +48,15 @@ def test_installers_point_at_the_real_repository(script):
     assert "scarrymany/watthog" in (ROOT / script).read_text(encoding="ascii")
 
 
-def test_version_is_consistent_across_project_files():
+@pytest.mark.parametrize("resource", ["version_info.txt", "version_info_gui.txt"])
+def test_version_is_consistent_across_project_files(resource):
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    version_info = (ROOT / "packaging" / "version_info.txt").read_text(encoding="utf-8")
+    version_info = (ROOT / "packaging" / resource).read_text(encoding="utf-8")
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
 
     assert f'version = "{__version__}"' in pyproject
     assert f"'FileVersion', '{__version__}'" in version_info
+    assert f"'ProductVersion', '{__version__}'" in version_info
     assert f"[{__version__}]" in changelog
 
 
@@ -65,7 +67,18 @@ def test_icon_exists_and_is_a_valid_ico():
     assert int.from_bytes(payload[4:6], "little") > 0
 
 
-def test_pyinstaller_spec_references_the_entry_point():
+def test_pyinstaller_spec_builds_both_executables():
     spec = (ROOT / "packaging" / "watthog.spec").read_text(encoding="utf-8")
-    assert "__main__.py" in spec
     assert 'name="WattHog"' in spec
+    assert 'name="WattHog-GUI"' in spec
+    assert "console=True" in spec
+    assert "console=False" in spec
+    # Оконный интерфейс не нужен консольной сборке и только раздувал бы её.
+    assert '"customtkinter", "darkdetect", "watthog.gui"' in spec
+
+
+def test_gui_entry_point_is_declared():
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert "[project.gui-scripts]" in pyproject
+    assert 'watthog-gui = "watthog.gui.app:main"' in pyproject
+    assert '"watthog.gui"' in pyproject

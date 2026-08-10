@@ -9,8 +9,11 @@ from __future__ import annotations
 
 import struct
 import sys
-import zlib
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from pngwriter import write_png  # noqa: E402
 
 ICON_SIZES = (16, 24, 32, 48, 64, 128, 256)
 LOGO_PNG_SIZE = 256
@@ -86,20 +89,6 @@ def render_rgba(size: int) -> list[bytes]:
     return rows
 
 
-def write_png(path: Path, rows: list[bytes], size: int) -> None:
-    raw = b"".join(b"\x00" + row for row in rows)
-    header = struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0)
-    payload = b"".join(
-        _png_chunk(name, data)
-        for name, data in ((b"IHDR", header), (b"IDAT", zlib.compress(raw, 9)), (b"IEND", b""))
-    )
-    path.write_bytes(b"\x89PNG\r\n\x1a\n" + payload)
-
-
-def _png_chunk(name: bytes, data: bytes) -> bytes:
-    return struct.pack(">I", len(data)) + name + data + struct.pack(">I", zlib.crc32(name + data) & 0xFFFFFFFF)
-
-
 def _dib_image(rows: list[bytes], size: int) -> bytes:
     """Изображение в формате DIB для контейнера ICO: BGRA, строки снизу вверх."""
     header = struct.pack("<IiiHHIIiiII", 40, size, size * 2, 1, 32, 0, size * size * 4, 0, 0, 0, 0)
@@ -139,7 +128,7 @@ def main() -> int:
     print(f"иконка: {icon_path} ({icon_path.stat().st_size} байт)")
 
     logo_path = assets / "logo.png"
-    write_png(logo_path, render_rgba(LOGO_PNG_SIZE), LOGO_PNG_SIZE)
+    write_png(logo_path, render_rgba(LOGO_PNG_SIZE), LOGO_PNG_SIZE, LOGO_PNG_SIZE)
     print(f"логотип: {logo_path} ({logo_path.stat().st_size} байт)")
     return 0
 

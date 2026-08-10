@@ -12,10 +12,11 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge&labelColor=161b22)](LICENSE)
 [![Platform](https://img.shields.io/badge/Windows%20%7C%20Linux-161b22?style=for-the-badge&logo=windows&logoColor=ffd23f)](#installation)
 [![Telegram](https://img.shields.io/badge/@yeet17-161b22?style=for-the-badge&logo=telegram&logoColor=ffd23f)](https://t.me/yeet17)
+[![Donate](https://img.shields.io/badge/♥%20donate-161b22?style=for-the-badge&labelColor=161b22&color=ff4d4d)](DONATE.md)
 
-[Installation](#installation) · [Usage](#usage) · [How it works](#how-it-works) · [Accuracy](#accuracy) · [Русский](README.md)
+[Installation](#installation) · [Two interfaces](#two-interfaces) · [Usage](#usage) · [How it works](#how-it-works) · [Accuracy](#accuracy) · [Donate](#support-the-project) · [Русский](README.md)
 
-<img src="docs/dashboard.svg" width="900" alt="WattHog live dashboard">
+<img src="docs/gui.png" width="920" alt="WattHog desktop window">
 
 </div>
 
@@ -45,14 +46,27 @@ report states plainly which part was measured and which part was computed.
 
 | | |
 |---|---|
+| 🪟 **Two interfaces** | A console-free desktop window and a full text UI in the terminal |
 | ⚡ **Real sensors** | NVML for NVIDIA GPUs, RAPL for the CPU on Linux, hwmon for AMD and Intel GPUs, battery discharge rate on laptops |
-| 📊 **Live dashboard** | Current draw in large digits, per-component breakdown, chart across the whole run |
+| 📊 **Live readings** | Current draw in large digits, per-component breakdown, chart across the whole run |
 | 🧮 **Projections** | 1 hour, 10 hours, 12 hours, a day, a week, a month - in kWh and in money at your tariff |
 | 🔌 **Wall power, not DC** | PSU losses are added from an 80 PLUS efficiency curve, not a flat coefficient |
 | 🖥 **Windows and Linux** | Desktops, laptops, mini PCs. No administrator rights required |
-| 📦 **Single file** | `WattHog.exe` with no install and no Python. Or `pip install` if you prefer |
+| 📦 **Single file** | Prebuilt binaries with no install and no Python. Or `pip install` if you prefer |
 | 📁 **JSON reports** | Every run is stored in full: statistics, breakdown, hardware, data sources |
 | 🎛 **Calibration** | Know the real numbers for your box? Put them in the settings and the model follows |
+
+## Two interfaces
+
+Both versions compute exactly the same way: shared measurement engine, shared power model,
+shared report format. Only the presentation differs.
+
+- **`WattHog-GUI.exe`** - desktop window, no console, double-click to run.
+- **`WattHog.exe`** - live dashboard in the terminal, menus, command line flags, works over SSH.
+
+<div align="center">
+<img src="docs/dashboard.svg" width="920" alt="WattHog terminal dashboard">
+</div>
 
 ## Installation
 
@@ -72,17 +86,19 @@ curl -fsSL https://raw.githubusercontent.com/scarrymany/watthog/main/install.sh 
 ```
 
 Installs through `pipx`, or into an isolated environment under `~/.local/share/watthog`
-with a symlink in `~/.local/bin`.
+with a symlink in `~/.local/bin`. Both `watthog` and `watthog-gui` become available.
 
 ### Standalone binaries
 
 ```powershell
+curl.exe -L -o WattHog-GUI.exe https://github.com/scarrymany/watthog/releases/latest/download/WattHog-GUI.exe
 curl.exe -L -o WattHog.exe https://github.com/scarrymany/watthog/releases/latest/download/WattHog.exe
 ```
 
 ```bash
 curl -fsSL -o watthog https://github.com/scarrymany/watthog/releases/latest/download/watthog-linux-x86_64
-chmod +x watthog && ./watthog
+curl -fsSL -o watthog-gui https://github.com/scarrymany/watthog/releases/latest/download/watthog-gui-linux-x86_64
+chmod +x watthog watthog-gui && ./watthog
 ```
 
 ### pip / pipx / source
@@ -92,7 +108,16 @@ pipx install git+https://github.com/scarrymany/watthog.git
 pip install git+https://github.com/scarrymany/watthog.git
 
 git clone https://github.com/scarrymany/watthog.git
-cd watthog && pip install -e ".[dev]" && python -m watthog
+cd watthog && pip install -e ".[dev]"
+python -m watthog        # console
+python -m watthog.gui    # window
+```
+
+On Linux the window needs the system Tk package:
+
+```bash
+sudo apt install python3-tk       # Debian, Ubuntu
+sudo dnf install python3-tkinter  # Fedora
 ```
 
 > **macOS is not supported.** There is no RAPL and no equivalent of the PDH counters, so
@@ -101,6 +126,8 @@ cd watthog && pip install -e ".[dev]" && python -m watthog
 ## Usage
 
 ```bash
+watthog-gui                          # desktop window
+watthog gui                          # the same window from the console build
 watthog                              # interactive menu
 watthog run                          # 60 second run with the live dashboard
 watthog run -d 300                   # five minutes
@@ -124,7 +151,7 @@ watthog config                       # settings
 | `-V`, `--version` | Version |
 
 <div align="center">
-<img src="docs/report.svg" width="900" alt="WattHog final report">
+<img src="docs/report.svg" width="920" alt="WattHog final report">
 </div>
 
 ## How it works
@@ -215,13 +242,30 @@ python tools/make_icon.py
 python -m PyInstaller --noconfirm --clean packaging/watthog.spec
 ```
 
-Release binaries for Windows and Linux are built by
+Both executables land in `dist/`. Release binaries for Windows and Linux are built by
 [GitHub Actions](.github/workflows/release.yml) on a tag.
 
 ## Privacy
 
 No network requests at all: no telemetry, no update checks. Everything is computed
 locally and reports stay on your disk.
+
+## Support the project
+
+Free, open source, no ads, no data collection. If it turned out useful, you can support
+it with crypto:
+
+| Network | Coins | Address |
+|---|---|---|
+| **TRC20** | USDT, TRX | `TLEzifd4zGRtHt4JbMhXKrzM2bMfNj6YTM` |
+| **BEP20** | USDT, BNB | `0x5DC287eeae44d140AcF80Ea20D695A6A1De9Ba8d` |
+| **TON** | Toncoin | `UQB2w5UGye1nw0yQGQrPPkeIdwWZ1_2iwRX6fLgh5iMn1vDk` |
+| **Litecoin** | LTC | `ltc1q9384p272katyss6s7ugeez8vdkm49jtxktyheu` |
+| **Bitcoin** | BTC | `bc1q5w8ynurd6urjkxzhy9z6av65cauc3culy60get` |
+
+The same addresses live inside the app: the **♥ Поддержать** button in the window copies
+them to the clipboard. See [DONATE.md](DONATE.md) for details and for ways to help
+without money.
 
 ## Contributing
 

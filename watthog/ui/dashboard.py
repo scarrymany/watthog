@@ -12,6 +12,7 @@ from rich.text import Text
 
 from watthog import AUTHOR_TELEGRAM, __version__
 from watthog.config import Settings
+from watthog.formatting import shorten_hardware_name
 from watthog.inventory import HardwareProfile
 from watthog.meter import Accuracy, PowerBreakdown
 from watthog.projections import consumption_tier
@@ -119,8 +120,8 @@ class LiveDashboard:
         return Panel(grid, border_style="app.border", padding=(0, 1))
 
     def _hardware_summary(self) -> list[str]:
-        parts = [self._profile.cpu.name]
-        parts.extend(gpu.name for gpu in self._profile.discrete_gpus)
+        parts = [shorten_hardware_name(self._profile.cpu.name)]
+        parts.extend(shorten_hardware_name(gpu.name) for gpu in self._profile.discrete_gpus)
         parts.append(f"{self._profile.ram_gib:.0f} ГБ")
         parts.append(self._profile.form_factor.value)
         return parts
