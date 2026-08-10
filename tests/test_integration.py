@@ -15,6 +15,7 @@ SHORT_DURATION_SECONDS = 1.0
 SHORT_INTERVAL_SECONDS = 0.25
 EXPECTED_SAMPLES = int(SHORT_DURATION_SECONDS / SHORT_INTERVAL_SECONDS)
 CONVERSION_LOSS_LABEL = "Потери БП"
+_FLOAT_TOLERANCE = 1e-9
 
 
 def run_short_session():
@@ -43,7 +44,11 @@ def test_session_produces_plausible_power_readings():
     assert result.duration_seconds > 0.0
     # Ни одна реальная система не потребляет меньше ватта и больше трёх киловатт.
     assert 1.0 < result.average_watts < 3000.0
-    assert result.minimum_watts <= result.average_watts <= result.maximum_watts
+    # Среднее получается интегрированием энергии, а границы берутся прямо из
+    # выборок. При постоянной мощности эти два пути расходятся в последнем
+    # разряде, поэтому сравнение идёт с допуском.
+    assert result.minimum_watts - _FLOAT_TOLERANCE <= result.average_watts
+    assert result.average_watts <= result.maximum_watts + _FLOAT_TOLERANCE
     assert result.energy_wh > 0.0
     assert result.average_breakdown.total_ac > result.average_breakdown.total_dc
 

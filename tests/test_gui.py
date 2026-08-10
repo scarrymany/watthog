@@ -18,23 +18,44 @@ from watthog.gui.app import _span_title  # noqa: E402
 from watthog.gui.widgets import BreakdownRow  # noqa: E402
 
 
-@pytest.fixture
-def tk_environment():
-    """Пропускает тест там, где Tk не работает.
+def _skip_if_tk_is_broken(error: tk.TclError) -> None:
+    """Отсутствие экрана и повреждённая установка Tcl - проблемы окружения.
 
-    Причин две: отсутствие экрана и повреждённая установка Tcl. Обе относятся к
-    окружению, а не к коду, и обе проявляются только при создании окна, поэтому
-    проверка делает ровно то же, что и сам тест, и делает это перед каждым.
+    Отдельная проба перед тестом ненадёжна: на серверах сборки встречается Tk,
+    где простое окно создаётся, а полноценное падает на недостающих файлах
+    библиотеки. Поэтому пропуск навешивается прямо на создание окна.
     """
+    pytest.skip(f"Tk недоступен в этом окружении: {error}")
+
+
+@pytest.fixture
+def tk_root():
     try:
-        probe = tk.Tk()
-        probe.update()
-        probe.destroy()
+        root = tk.Tk()
+        root.update()
     except tk.TclError as error:
-        pytest.skip(f"Tk недоступен в этом окружении: {error}")
+        _skip_if_tk_is_broken(error)
+    try:
+        yield root
+    finally:
+        root.destroy()
 
 
-requires_display = pytest.mark.usefixtures("tk_environment")
+@pytest.fixture
+def gui_window():
+    from watthog.gui.app import WattHogWindow
+    from watthog.gui.theme import configure_appearance
+
+    configure_appearance()
+    try:
+        window = WattHogWindow()
+        window.update()
+    except tk.TclError as error:
+        _skip_if_tk_is_broken(error)
+    try:
+        yield window
+    finally:
+        window.destroy()
 
 
 def test_palette_gradient_covers_the_whole_range():
@@ -70,96 +91,81 @@ def test_breakdown_row_keeps_its_values():
     assert (row.label, row.watts, row.share) == ("Процессор", 73.7, 0.24)
 
 
-@requires_display
-def test_window_builds_and_closes():
-    from watthog.gui.app import WattHogWindow
-    from watthog.gui.theme import configure_appearance
-
-    configure_appearance()
-    window = WattHogWindow()
-    try:
-        window.update()
-        assert window.winfo_width() > 0
-    finally:
-        window.destroy()
+def test_window_builds_and_shows_placeholders(gui_window):
+    assert gui_window.winfo_width() > 0
+    assert gui_window._readout.cget("text")
+    assert gui_window._save_button.cget("state") == "disabled"
 
 
-@requires_display
-def test_dialogs_build_and_close():
-    from watthog.gui.app import WattHogWindow
+def test_dialogs_build_and_close(gui_window):
     from watthog.gui.dialogs import AboutDialog, DonateDialog, SettingsDialog
-    from watthog.gui.theme import configure_appearance
 
-    configure_appearance()
-    window = WattHogWindow()
-    try:
-        window.update()
-        for factory in (
-            lambda: SettingsDialog(window, window._fonts, window._settings, lambda _settings: None),
-            lambda: AboutDialog(window, window._fonts),
-            lambda: DonateDialog(window, window._fonts),
-        ):
-            dialog = factory()
-            window.update()
-            dialog.destroy()
-            window.update()
-    finally:
-        window.destroy()
+    for factory in (
+        lambda: SettingsDialog(gui_window, gui_window._fonts, gui_window._settings, lambda _settings: None),
+        lambda: AboutDialog(gui_window, gui_window._fonts),
+        lambda: DonateDialog(gui_window, gui_window._fonts),
+    ):
+        dialog = factory()
+        gui_window.update()
+        dialog.destroy()
+        gui_window.update()
 
 
-@requires_display
-def test_widgets_draw_without_errors():
-    from watthog.gui.theme import Fonts, configure_appearance
+def test_widgets_draw_without_errors(tk_root):
+    from watthog.gui.theme import Fonts
     from watthog.gui.widgets import BreakdownChart, PowerChart, PowerGauge
 
-    configure_appearance()
-    root = tk.Tk()
-    try:
-        fonts = Fonts(root)
-        values = [200.0 + index for index in range(60)]
-        floor, ceiling = chart_bounds(values)
+    fonts = Fonts(tk_root)
+    values = [200.0 + index for index in range(60)]
+    floor, ceiling = chart_bounds(values)
 
-        gauge = PowerGauge(root, fonts)
-        gauge.pack(fill="x")
-        chart = PowerChart(root, fonts)
-        chart.pack(fill="both", expand=True)
-        breakdown = BreakdownChart(root, fonts)
-        breakdown.pack(fill="both", expand=True)
-        root.geometry("800x500")
-        root.update()
+    gauge = PowerGauge(tk_root, fonts)
+    gauge.pack(fill="x")
+    chart = PowerChart(tk_root, fonts)
+    chart.pack(fill="both", expand=True)
+    breakdown = BreakdownChart(tk_root, fonts)
+    breakdown.pack(fill="both", expand=True)
+    tk_root.geometry("800x500")
+    tk_root.update()
 
-        gauge.set_value(260.0, 400.0)
-        chart.set_history(values, floor, ceiling, 400.0)
-        breakdown.set_rows([BreakdownRow(name, 30.0, 0.3) for name in ("Процессор", "Видеокарта")])
-        root.update()
+    gauge.set_value(260.0, 400.0)
+    chart.set_history(values, floor, ceiling, 400.0)
+    breakdown.set_rows([BreakdownRow(name, 30.0, 0.3) for name in ("Процессор", "Видеокарта")])
+    tk_root.update()
 
-        assert chart.find_all()
-        assert breakdown.find_all()
-        assert gauge.find_all()
-    finally:
-        root.destroy()
+    assert chart.find_all()
+    assert breakdown.find_all()
+    assert gauge.find_all()
 
 
-@requires_display
-def test_donate_dialog_copies_address_to_clipboard():
-    from watthog.gui.app import WattHogWindow
+def test_empty_chart_draws_no_axis_labels(tk_root):
+    from watthog.gui.theme import Fonts
+    from watthog.gui.widgets import PowerChart
+
+    chart = PowerChart(tk_root, Fonts(tk_root))
+    chart.pack(fill="both", expand=True)
+    tk_root.geometry("800x400")
+    tk_root.update()
+
+    chart.set_history([], 0.0, 1.0, 1.0)
+    tk_root.update()
+
+    texts = [chart.itemcget(item, "text") for item in chart.find_all() if chart.type(item) == "text"]
+    # Подписи шкалы без данных были бы бессмысленными нулями и единицами.
+    assert texts == ["График появится после запуска замера"]
+
+
+def test_donate_dialog_copies_address_to_clipboard(gui_window):
     from watthog.gui.dialogs import DonateDialog
-    from watthog.gui.theme import configure_appearance
 
-    configure_appearance()
-    window = WattHogWindow()
-    try:
-        window.update()
-        dialog = DonateDialog(window, window._fonts)
-        window.update()
+    dialog = DonateDialog(gui_window, gui_window._fonts)
+    gui_window.update()
 
-        expected = DONATION_ADDRESSES[0].address
-        dialog.clipboard_clear()
-        dialog.clipboard_append(expected)
-        window.update()
-        assert dialog.clipboard_get() == expected
+    expected = DONATION_ADDRESSES[0].address
+    dialog.clipboard_clear()
+    dialog.clipboard_append(expected)
+    gui_window.update()
+    assert dialog.clipboard_get() == expected
 
-        dialog.destroy()
-        window.update()
-    finally:
-        window.destroy()
+    dialog.destroy()
+    gui_window.update()
